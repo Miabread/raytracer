@@ -6,6 +6,7 @@ publish = false
 
 [dependencies]
 console_error_panic_hook = "0.1.7"
+js-sys = "0.3.103"
 wasm-bindgen = "0.2.126"
 
 [dependencies.web-sys]
@@ -16,6 +17,8 @@ features = [
     "console",
     "OffscreenCanvas",
     "OffscreenCanvasRenderingContext2d",
+    "DedicatedWorkerGlobalScope",
+    "Performance",
 ]
 
 [lib]

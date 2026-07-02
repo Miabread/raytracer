@@ -5,5 +5,5 @@ self.onmessage = async (event) => {
 
     await init();
 
-    draw(event.data.canvas);
+    draw(event.data.canvas, event.data.aspectRatio);
 };
