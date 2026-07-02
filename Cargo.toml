@@ -5,14 +5,31 @@ edition = "2024"
 publish = false
 
 [dependencies]
+console_error_panic_hook = "0.1.7"
 wasm-bindgen = "0.2.126"
 
 [dependencies.web-sys]
 version = "0.3.103"
-features = ['CanvasRenderingContext2d', 'Document', 'Element', 'HtmlCanvasElement', 'Window']
+features = [
+    "ImageData",
+    'Window',
+    "console",
+    "OffscreenCanvas",
+    "OffscreenCanvasRenderingContext2d",
+]
 
 [lib]
 crate-type = ["cdylib"]
 
 [profile.release]
 lto = true
+
+[target.wasm32-unknown-unknown]
+rustflags = [
+    # Set the initial memory allocation (e.g., 256MB)
+    "-C",
+    "link-arg=--initial-memory=268435456",
+    # Set the maximum memory allocation to the absolute 4GB cap
+    "-C",
+    "link-arg=--max-memory=4294967296",
+]

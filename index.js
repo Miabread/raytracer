@@ -1,13 +1,9 @@
-import { draw } from './pkg';
-
 const canvas = document.getElementById('canvas');
 
-const resizeCanvas = () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-};
+const offscreen = canvas.transferControlToOffscreen();
 
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
+const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
 
-draw();
+worker.postMessage({ canvas: offscreen }, [offscreen]);
+
+console.log('worker posted');

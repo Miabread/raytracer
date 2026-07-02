@@ -1,41 +1,57 @@
-use std::f64::consts::PI;
-
-use wasm_bindgen::prelude::*;
+use wasm_bindgen::{Clamped, prelude::*};
+use web_sys::{ImageData, OffscreenCanvas, console};
 
 #[wasm_bindgen]
-pub fn draw() {
-    let document = web_sys::window().unwrap().document().unwrap();
-    let canvas = document.get_element_by_id("canvas").unwrap();
-    let canvas: web_sys::HtmlCanvasElement = canvas
-        .dyn_into::<web_sys::HtmlCanvasElement>()
-        .map_err(|_| ())
-        .unwrap();
+pub fn draw(canvas: OffscreenCanvas) {
+    console_error_panic_hook::set_once();
 
     let context = canvas
         .get_context("2d")
         .unwrap()
         .unwrap()
-        .dyn_into::<web_sys::CanvasRenderingContext2d>()
+        .dyn_into::<web_sys::OffscreenCanvasRenderingContext2d>()
         .unwrap();
 
-    context.set_stroke_style_str("#0000FF");
+    console::log_1(&"acquired canvas".into());
 
-    context.begin_path();
+    context.set_fill_style_str("#FF0000");
+    context.fill_rect(10.0, 10.0, 150.0, 100.0);
 
-    // Draw the outer circle.
-    context.arc(75.0, 75.0, 50.0, 0.0, PI * 2.0).unwrap();
+    let image_width = 20usize;
+    let image_height = 20usize;
 
-    // Draw the mouth.
-    context.move_to(110.0, 75.0);
-    context.arc(75.0, 75.0, 35.0, 0.0, PI).unwrap();
+    canvas.set_width(image_width as _);
+    canvas.set_height(image_height as _);
 
-    // Draw the left eye.
-    context.move_to(65.0, 65.0);
-    context.arc(60.0, 65.0, 5.0, 0.0, PI * 2.0).unwrap();
+    let mut pixels = vec![0u8; image_width * image_height * 4];
 
-    // Draw the right eye.
-    context.move_to(95.0, 65.0);
-    context.arc(90.0, 65.0, 5.0, 0.0, PI * 2.0).unwrap();
+    console::log_1(&"created image data".into());
 
-    context.stroke();
+    for j in 0..image_height {
+        console::log_1(&format!("scanlines remaining: {}", image_height - j).into());
+
+        for i in 0..image_width {
+            let r = i as f64 / (image_width - 1) as f64;
+            let g = j as f64 / (image_height - 1) as f64;
+            let b = 0.0f64;
+
+            let index = (j * image_width + i) * 4;
+            pixels[index] = (255.0 * r).round() as _;
+            pixels[index + 1] = (255.0 * g).round() as _;
+            pixels[index + 2] = (255.0 * b).round() as _;
+            pixels[index + 3] = 255;
+        }
+    }
+
+    console::log_1(&"finished rendering".into());
+
+    let image_data = ImageData::new_with_u8_clamped_array_and_sh(
+        Clamped(&pixels),
+        image_width as _,
+        image_height as _,
+    )
+    .unwrap();
+    context.put_image_data(&image_data, 0.0, 0.0).unwrap();
+
+    console::log_1(&"uploaded image data".into());
 }

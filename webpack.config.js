@@ -17,6 +17,7 @@ module.exports = {
         }),
         new WasmPackPlugin({
             crateDirectory: __dirname,
+            extraArgs: '--target web',
         }),
     ],
     mode: 'development',
