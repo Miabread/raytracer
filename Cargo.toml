@@ -19,6 +19,7 @@ features = [
     "OffscreenCanvasRenderingContext2d",
     "DedicatedWorkerGlobalScope",
     "Performance",
+    "MessagePort"
 ]
 
 [lib]

@@ -1,5 +1,5 @@
 use js_sys::Math;
-use wasm_bindgen::{JsCast, prelude::Closure};
+use wasm_bindgen::JsCast;
 use web_sys::Performance;
 
 #[macro_export]
@@ -7,20 +7,14 @@ macro_rules! console_log {
     ($($t:tt)*) => (::web_sys::console::log_1(&format!($($t)*).into()))
 }
 
-pub fn performance() -> Performance {
+pub fn worker_scope() -> web_sys::DedicatedWorkerGlobalScope {
     js_sys::global()
         .dyn_into::<web_sys::DedicatedWorkerGlobalScope>()
-        .unwrap()
-        .performance()
         .unwrap()
 }
 
-pub fn request_animation_frame(f: &Closure<dyn FnMut()>) {
-    js_sys::global()
-        .dyn_into::<web_sys::DedicatedWorkerGlobalScope>()
-        .unwrap()
-        .request_animation_frame(f.as_ref().unchecked_ref())
-        .expect("should register `requestAnimationFrame` OK");
+pub fn performance() -> Performance {
+    worker_scope().performance().unwrap()
 }
 
 pub const fn interval(min: f64, max: f64) -> Interval {

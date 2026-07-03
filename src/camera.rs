@@ -97,10 +97,10 @@ impl Camera {
 
         let mut scanline_time_total = 0.0;
 
-        for j in 0..self.computed.image_height {
+        for j in (0..self.computed.image_height).rev() {
             let scanline_start = performance.now();
 
-            for i in 0..self.render.image_width {
+            for i in (0..self.render.image_width).rev() {
                 let mut pixel_color = color(0.0, 0.0, 0.0);
 
                 for _ in 0..self.render.samples_per_pixel {
@@ -148,7 +148,11 @@ impl Camera {
     }
 
     fn get_ray(&self, i: f64, j: f64) -> Ray {
-        let offset = Self::sample_square();
+        let offset = arrow(
+            Interval::UNIT.random_double() - 0.5,
+            Interval::UNIT.random_double() - 0.5,
+            0.0,
+        );
         let pixel_sample = self.computed.first_pixel_location
             + ((i + offset.x()) * self.computed.pixel_delta_u)
             + ((j + offset.y()) * self.computed.pixel_delta_v);
@@ -156,14 +160,6 @@ impl Camera {
         let origin = self.computed.center;
         let direction = (pixel_sample - origin).as_arrow();
         Ray::new(origin, direction)
-    }
-
-    fn sample_square() -> Arrow {
-        arrow(
-            Interval::UNIT.random_double() - 0.5,
-            Interval::UNIT.random_double() - 0.5,
-            0.0,
-        )
     }
 
     fn convert_color(&self, color: Color) -> [u8; 3] {
@@ -177,12 +173,5 @@ impl Camera {
         });
 
         [color.r() as _, color.g() as _, color.b() as _]
-    }
-
-    pub fn image_width(&self) -> usize {
-        self.render.image_width
-    }
-    pub fn image_height(&self) -> usize {
-        self.computed.image_height
     }
 }
