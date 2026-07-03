@@ -39,17 +39,26 @@ pub fn draw(canvas: OffscreenCanvas, aspect_ratio: f64) {
         scene.camera,
     );
 
-    canvas.set_width(camera.image_width() as _);
-    canvas.set_height(camera.image_height() as _);
+    let image_width = camera.image_width();
+    let image_height = camera.image_height();
+
+    canvas.set_width(image_width as _);
+    canvas.set_height(image_height as _);
 
     // Render
-    let mut pixels = vec![0u8; camera.image_width() * camera.image_height() * 4];
-    camera.render(&scene.world, &mut pixels);
+    let mut pixels = vec![0u8; image_width * image_height * 4];
+    camera.render(&scene.world, |[i, j], [r, g, b]| {
+        let index = (j * image_width + i) * 4;
+        pixels[index] = r;
+        pixels[index + 1] = g;
+        pixels[index + 2] = b;
+        pixels[index + 3] = 255;
+    });
 
     let image_data = ImageData::new_with_u8_clamped_array_and_sh(
         Clamped(&pixels),
-        camera.image_width() as _,
-        camera.image_height() as _,
+        image_width as _,
+        image_height as _,
     )
     .unwrap();
 

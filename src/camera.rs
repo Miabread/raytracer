@@ -34,6 +34,7 @@ pub struct CameraSceneOptions {
     // pub focus_distance: f64,
 }
 
+#[allow(clippy::derivable_impls)]
 impl Default for CameraSceneOptions {
     fn default() -> Self {
         Self {}
@@ -48,6 +49,7 @@ struct CameraComputed {
     pixel_delta_v: Arrow,
 }
 
+#[allow(dead_code)]
 pub struct Camera {
     render: CameraRenderOptions,
     scene: CameraSceneOptions,
@@ -88,7 +90,7 @@ impl Camera {
         }
     }
 
-    pub fn render(&self, world: &impl Surface, pixels: &mut [u8]) {
+    pub fn render(&self, world: &impl Surface, mut write_pixel: impl FnMut([usize; 2], [u8; 3])) {
         console_log!("start rendering");
         let performance = performance();
         let render_start_time = performance.now();
@@ -108,7 +110,7 @@ impl Camera {
 
                 let pixel_color = pixel_color / self.render.samples_per_pixel as f64;
 
-                self.write_color(i, j, pixels, pixel_color);
+                write_pixel([i, j], self.convert_color(pixel_color));
             }
 
             let scanline_time = performance.now() - scanline_start;
@@ -164,7 +166,7 @@ impl Camera {
         )
     }
 
-    fn write_color(&self, i: usize, j: usize, pixels: &mut [u8], color: Color) {
+    fn convert_color(&self, color: Color) -> [u8; 3] {
         let intensity = interval(0.000, 0.999);
         let color = color.map(|a| {
             if a > 0.0 {
@@ -174,11 +176,7 @@ impl Camera {
             }
         });
 
-        let index = (j * self.render.image_width + i) * 4;
-        pixels[index] = color.r() as _;
-        pixels[index + 1] = color.g() as _;
-        pixels[index + 2] = color.b() as _;
-        pixels[index + 3] = 255;
+        [color.r() as _, color.g() as _, color.b() as _]
     }
 
     pub fn image_width(&self) -> usize {
