@@ -1,9 +1,7 @@
-use web_sys::Performance;
-
 use crate::{
     console_log,
     surface::{Ray, Surface},
-    util::{Interval, interval},
+    util::{Interval, interval, performance},
     vec3::{Arrow, Color, Point, arrow, color, point, vec3},
 };
 
@@ -12,7 +10,7 @@ pub struct CameraRenderOptions {
     pub image_width: usize,
     pub aspect_ratio: f64,
     pub samples_per_pixel: usize,
-    // max_depth: f64,
+    pub max_depth: usize,
 }
 
 impl Default for CameraRenderOptions {
@@ -21,18 +19,19 @@ impl Default for CameraRenderOptions {
             image_width: 400,
             aspect_ratio: 16.0 / 9.0,
             samples_per_pixel: 100,
+            max_depth: 10,
         }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct CameraSceneOptions {
-    // vertical_fox: f64,
-    // look_from: Point,
-    // look_at: Point,
-    // v_up: Arrow,
-    // defocus_angle: f64,
-    // focus_distance: f64,
+    // pub vertical_fox: f64,
+    // pub look_from: Point,
+    // pub look_at: Point,
+    // pub v_up: Arrow,
+    // pub defocus_angle: f64,
+    // pub focus_distance: f64,
 }
 
 impl Default for CameraSceneOptions {
@@ -89,8 +88,9 @@ impl Camera {
         }
     }
 
-    pub fn render(&self, world: &impl Surface, performance: &Performance, pixels: &mut [u8]) {
+    pub fn render(&self, world: &impl Surface, pixels: &mut [u8]) {
         console_log!("start rendering");
+        let performance = performance();
         let render_start_time = performance.now();
 
         let mut scanline_time_total = 0.0;
@@ -103,7 +103,7 @@ impl Camera {
 
                 for _ in 0..self.render.samples_per_pixel {
                     let ray = self.get_ray(i as f64, j as f64);
-                    pixel_color = pixel_color + Self::ray_color(ray, world);
+                    pixel_color = pixel_color + Self::get_color(ray, self.render.max_depth, world);
                 }
 
                 let pixel_color = pixel_color / self.render.samples_per_pixel as f64;
@@ -127,14 +127,22 @@ impl Camera {
         );
     }
 
-    fn ray_color(ray: Ray, world: &impl Surface) -> Color {
-        if let Some(hit) = world.hit(ray, interval(0.0, f64::INFINITY)) {
-            return 0.5 * (color(1.0, 1.0, 1.0) + hit.normal);
+    fn get_color(ray: Ray, depth: usize, world: &impl Surface) -> Color {
+        if depth == 0 {
+            return color(0.0, 0.0, 0.0);
         }
 
-        let unit_direction = ray.direction.unit_vector();
-        let a = 0.5 * (unit_direction.y() + 1.0);
-        color(1.0, 1.0, 1.0) * (1.0 - a) + color(0.5, 0.7, 1.0) * a
+        let Some(hit) = world.hit(ray, interval(0.001, f64::INFINITY)) else {
+            let unit_direction = ray.direction.unit_vector();
+            let a = 0.5 * (unit_direction.y() + 1.0);
+            return color(1.0, 1.0, 1.0) * (1.0 - a) + color(0.5, 0.7, 1.0) * a;
+        };
+
+        let Some(mat_hit) = hit.material.clone().scatter(ray, hit) else {
+            return color(0.0, 0.0, 0.0);
+        };
+
+        mat_hit.attenuation * Self::get_color(mat_hit.scattered, depth - 1, world)
     }
 
     fn get_ray(&self, i: f64, j: f64) -> Ray {
@@ -157,11 +165,26 @@ impl Camera {
     }
 
     fn write_color(&self, i: usize, j: usize, pixels: &mut [u8], color: Color) {
-        let index = (j * self.render.image_width + i) * 4;
         let intensity = interval(0.000, 0.999);
-        pixels[index] = (256.0 * intensity.clamp(color.r())) as _;
-        pixels[index + 1] = (256.0 * intensity.clamp(color.g())) as _;
-        pixels[index + 2] = (256.0 * intensity.clamp(color.b())) as _;
+        let color = color.map(|a| {
+            if a > 0.0 {
+                256.0 * intensity.clamp(a.sqrt())
+            } else {
+                0.0
+            }
+        });
+
+        let index = (j * self.render.image_width + i) * 4;
+        pixels[index] = color.r() as _;
+        pixels[index + 1] = color.g() as _;
+        pixels[index + 2] = color.b() as _;
         pixels[index + 3] = 255;
+    }
+
+    pub fn image_width(&self) -> usize {
+        self.render.image_width
+    }
+    pub fn image_height(&self) -> usize {
+        self.computed.image_height
     }
 }

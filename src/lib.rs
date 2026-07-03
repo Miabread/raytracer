@@ -1,28 +1,23 @@
 pub mod camera;
+pub mod material;
+pub mod scene;
 pub mod surface;
 pub mod util;
 pub mod vec3;
 
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
 
 use wasm_bindgen::{Clamped, prelude::*};
 use web_sys::{ImageData, OffscreenCanvas};
 
 use crate::{
-    camera::{Camera, CameraRenderOptions, CameraSceneOptions},
-    surface::{Sphere, SurfaceList},
-    vec3::point,
+    camera::{Camera, CameraRenderOptions},
+    util::request_animation_frame,
 };
 
 #[wasm_bindgen]
 pub fn draw(canvas: OffscreenCanvas, aspect_ratio: f64) {
     console_error_panic_hook::set_once();
-
-    let performance = js_sys::global()
-        .dyn_into::<web_sys::DedicatedWorkerGlobalScope>()
-        .unwrap()
-        .performance()
-        .unwrap();
 
     let context = canvas
         .get_context("2d")
@@ -31,40 +26,41 @@ pub fn draw(canvas: OffscreenCanvas, aspect_ratio: f64) {
         .dyn_into::<web_sys::OffscreenCanvasRenderingContext2d>()
         .unwrap();
 
-    // Image
+    // Scene
+    let scene = scene::first();
 
-    let image_width = 400usize;
-    let image_height = (image_width as f64 / aspect_ratio).max(1.0) as usize;
-
-    canvas.set_width(image_width as _);
-    canvas.set_height(image_height as _);
-
-    // World
-    let mut world = SurfaceList::new();
-
-    world.add(Rc::new(Sphere::new(point(0.0, 0.0, -1.0), 0.5)));
-    world.add(Rc::new(Sphere::new(point(0.0, -100.5, -1.0), 100.0)));
-
-    // Camera
     let camera = Camera::new(
         CameraRenderOptions {
-            image_width,
+            image_width: 400,
             aspect_ratio,
-            samples_per_pixel: 10,
+            samples_per_pixel: 100,
+            max_depth: 10,
         },
-        CameraSceneOptions::default(),
+        scene.camera,
     );
 
-    let mut pixels = vec![0u8; image_width * image_height * 4];
-    camera.render(&world, &performance, &mut pixels);
+    canvas.set_width(camera.image_width() as _);
+    canvas.set_height(camera.image_height() as _);
 
-    // Upload
+    // Render
+    let mut pixels = vec![0u8; camera.image_width() * camera.image_height() * 4];
+    camera.render(&scene.world, &mut pixels);
 
     let image_data = ImageData::new_with_u8_clamped_array_and_sh(
         Clamped(&pixels),
-        image_width as _,
-        image_height as _,
+        camera.image_width() as _,
+        camera.image_height() as _,
     )
     .unwrap();
-    context.put_image_data(&image_data, 0.0, 0.0).unwrap();
+
+    // Keep rendering the static image in case the browser wipes our canvas
+    let closure_inner = Rc::new(RefCell::new(None));
+    let closure_outer = closure_inner.clone();
+
+    *closure_outer.borrow_mut() = Some(Closure::new(move || {
+        context.put_image_data(&image_data, 0.0, 0.0).unwrap();
+        request_animation_frame(closure_inner.borrow().as_ref().unwrap());
+    }));
+
+    request_animation_frame(closure_outer.borrow().as_ref().unwrap());
 }

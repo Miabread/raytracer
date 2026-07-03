@@ -4,6 +4,8 @@ use std::{
     ops::{Add, Div, Index, IndexMut, Mul, Neg, Sub},
 };
 
+use crate::util::Interval;
+
 pub fn vec3(x: f64, y: f64, z: f64) -> Vec3 {
     Vec3::new(x, y, z)
 }
@@ -28,8 +30,29 @@ impl<T: Copy> Vec3<T> {
         Self(x, y, z, PhantomData)
     }
 
-    pub fn of(a: f64) -> Vec3 {
-        vec3(a, a, a)
+    pub fn random(interval: Interval) -> Self {
+        Self::new(
+            interval.random_double(),
+            interval.random_double(),
+            interval.random_double(),
+        )
+    }
+    pub fn random_unit_vector() -> Self {
+        loop {
+            let p = Self::random(Interval::DIAM);
+            let len_sq = p.length_squared();
+            if 1e-160 < len_sq && len_sq <= 1.0 {
+                return p / len_sq.sqrt();
+            }
+        }
+    }
+    pub fn random_hemisphere(normal: Arrow) -> Self {
+        let on_unit_sphere = Self::random_unit_vector();
+        if on_unit_sphere.dot(normal) > 0.0 {
+            on_unit_sphere
+        } else {
+            -on_unit_sphere
+        }
     }
 
     pub fn map(self, mut func: impl FnMut(f64) -> f64) -> Self {
@@ -49,6 +72,10 @@ impl<T: Copy> Vec3<T> {
     pub fn length(self) -> f64 {
         self.length_squared().sqrt()
     }
+    pub fn near_zero(self) -> bool {
+        let eps = 1e-8;
+        self.0.abs() < eps && self.1.abs() < eps && self.2.abs() < eps
+    }
 
     pub fn dot<U>(self, rhs: Vec3<U>) -> f64 {
         self.0 * rhs.0 + self.1 * rhs.1 + self.2 * rhs.2
@@ -63,6 +90,16 @@ impl<T: Copy> Vec3<T> {
 
     pub fn unit_vector(self) -> Self {
         self / self.length()
+    }
+
+    pub fn reflect<U: Copy>(self, rhs: Vec3<U>) -> Self {
+        self - 2.0 * self.dot(rhs) * rhs
+    }
+    pub fn refract<U: Copy>(self, rhs: Vec3<U>, eta_over_eta: f64) -> Self {
+        let cos_theta = -self.dot(rhs).min(1.0);
+        let perpendicular = eta_over_eta * (self + cos_theta * rhs);
+        let parallel = (1.0 - perpendicular.length_squared()).abs().sqrt() * -rhs;
+        perpendicular + parallel
     }
 }
 

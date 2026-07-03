@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
+    material::Material,
     util::{Interval, interval},
     vec3::{Arrow, Point},
 };
@@ -21,16 +22,23 @@ impl Ray {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Clone)]
 pub struct HitResult {
     pub t: f64,
     pub point: Point,
     pub normal: Arrow,
     pub front_face: bool,
+    pub material: Rc<dyn Material>,
 }
 
 impl HitResult {
-    fn new(t: f64, point: Point, ray: Ray, outward_normal: Arrow) -> Self {
+    fn new(
+        t: f64,
+        point: Point,
+        ray: Ray,
+        outward_normal: Arrow,
+        material: Rc<dyn Material>,
+    ) -> Self {
         let front_face = ray.direction.dot(outward_normal) < 0.0;
         let normal = if front_face {
             outward_normal
@@ -42,6 +50,7 @@ impl HitResult {
             point,
             normal,
             front_face,
+            material,
         }
     }
 }
@@ -53,13 +62,15 @@ pub trait Surface {
 pub struct Sphere {
     center: Point,
     radius: f64,
+    material: Rc<dyn Material>,
 }
 
 impl Sphere {
-    pub fn new(center: Point, radius: f64) -> Self {
+    pub fn new(center: Point, radius: f64, material: Rc<dyn Material>) -> Self {
         Self {
             center,
             radius: radius.max(0.0),
+            material,
         }
     }
 }
@@ -88,7 +99,13 @@ impl Surface for Sphere {
         let t = root;
         let point = ray.at(t);
         let outward_normal = (point - self.center).as_arrow() / self.radius;
-        Some(HitResult::new(t, point, ray, outward_normal))
+        Some(HitResult::new(
+            t,
+            point,
+            ray,
+            outward_normal,
+            self.material.clone(),
+        ))
     }
 }
 
@@ -114,8 +131,8 @@ impl Surface for SurfaceList {
 
         for surface in &self.surfaces {
             if let Some(hit) = surface.hit(ray, interval(ray_t.min, closest_so_far)) {
-                best_hit = Some(hit);
                 closest_so_far = hit.t;
+                best_hit = Some(hit);
             }
         }
 
