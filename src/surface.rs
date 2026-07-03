@@ -1,4 +1,9 @@
-use crate::vec3::{Arrow, Point};
+use std::rc::Rc;
+
+use crate::{
+    util::{Interval, interval},
+    vec3::{Arrow, Point},
+};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Ray {
@@ -13,5 +18,107 @@ impl Ray {
 
     pub fn at(self, t: f64) -> Point {
         self.origin + t * self.direction
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct HitResult {
+    pub t: f64,
+    pub point: Point,
+    pub normal: Arrow,
+    pub front_face: bool,
+}
+
+impl HitResult {
+    fn new(t: f64, point: Point, ray: Ray, outward_normal: Arrow) -> Self {
+        let front_face = ray.direction.dot(outward_normal) < 0.0;
+        let normal = if front_face {
+            outward_normal
+        } else {
+            -outward_normal
+        };
+        Self {
+            t,
+            point,
+            normal,
+            front_face,
+        }
+    }
+}
+
+pub trait Surface {
+    fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitResult>;
+}
+
+pub struct Sphere {
+    center: Point,
+    radius: f64,
+}
+
+impl Sphere {
+    pub fn new(center: Point, radius: f64) -> Self {
+        Self {
+            center,
+            radius: radius.max(0.0),
+        }
+    }
+}
+
+impl Surface for Sphere {
+    fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitResult> {
+        let oc = self.center - ray.origin;
+        let a = ray.direction.length_squared();
+        let h = ray.direction.dot(oc);
+        let c = oc.length_squared() - self.radius * self.radius;
+        let discriminant = h * h - a * c;
+
+        if discriminant < 0.0 {
+            return None;
+        }
+
+        let sqrt_d = discriminant.sqrt();
+        let mut root = (h - sqrt_d) / a;
+        if !ray_t.surrounds(root) {
+            root = (h + sqrt_d) / a;
+            if !ray_t.surrounds(root) {
+                return None;
+            }
+        }
+
+        let t = root;
+        let point = ray.at(t);
+        let outward_normal = (point - self.center).as_arrow() / self.radius;
+        Some(HitResult::new(t, point, ray, outward_normal))
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct SurfaceList {
+    surfaces: Vec<Rc<dyn Surface>>,
+}
+
+impl SurfaceList {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn add(&mut self, surface: Rc<dyn Surface>) {
+        self.surfaces.push(surface);
+    }
+}
+
+impl Surface for SurfaceList {
+    fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitResult> {
+        let mut best_hit = None;
+        let mut closest_so_far = ray_t.max;
+
+        for surface in &self.surfaces {
+            if let Some(hit) = surface.hit(ray, interval(ray_t.min, closest_so_far)) {
+                best_hit = Some(hit);
+                closest_so_far = hit.t;
+            }
+        }
+
+        best_hit
     }
 }

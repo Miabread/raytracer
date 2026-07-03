@@ -1,0 +1,167 @@
+use web_sys::Performance;
+
+use crate::{
+    console_log,
+    surface::{Ray, Surface},
+    util::{Interval, interval},
+    vec3::{Arrow, Color, Point, arrow, color, point, vec3},
+};
+
+#[derive(Debug, Clone, Copy)]
+pub struct CameraRenderOptions {
+    pub image_width: usize,
+    pub aspect_ratio: f64,
+    pub samples_per_pixel: usize,
+    // max_depth: f64,
+}
+
+impl Default for CameraRenderOptions {
+    fn default() -> Self {
+        Self {
+            image_width: 400,
+            aspect_ratio: 16.0 / 9.0,
+            samples_per_pixel: 100,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct CameraSceneOptions {
+    // vertical_fox: f64,
+    // look_from: Point,
+    // look_at: Point,
+    // v_up: Arrow,
+    // defocus_angle: f64,
+    // focus_distance: f64,
+}
+
+impl Default for CameraSceneOptions {
+    fn default() -> Self {
+        Self {}
+    }
+}
+
+struct CameraComputed {
+    image_height: usize,
+    center: Point,
+    first_pixel_location: Point,
+    pixel_delta_u: Arrow,
+    pixel_delta_v: Arrow,
+}
+
+pub struct Camera {
+    render: CameraRenderOptions,
+    scene: CameraSceneOptions,
+    computed: CameraComputed,
+}
+
+impl Camera {
+    pub fn new(render: CameraRenderOptions, scene: CameraSceneOptions) -> Self {
+        let image_height = (render.image_width as f64 / render.aspect_ratio).max(1.0) as usize;
+
+        let focal_length = 1.0;
+        let viewport_height = 2.0;
+        let viewport_width = viewport_height * (render.image_width as f64 / image_height as f64);
+        let center = point(0.0, 0.0, 0.0);
+
+        let viewport_u = arrow(viewport_width, 0.0, 0.0);
+        let viewport_v = arrow(0.0, -viewport_height, 0.0);
+
+        let pixel_delta_u = viewport_u / render.image_width as f64;
+        let pixel_delta_v = viewport_v / image_height as f64;
+
+        let viewport_upper_left =
+            center - vec3(0.0, 0.0, focal_length) - viewport_u / 2.0 - viewport_v / 2.0;
+        let first_pixel_location = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
+
+        let computed = CameraComputed {
+            image_height,
+            center,
+            first_pixel_location,
+            pixel_delta_u,
+            pixel_delta_v,
+        };
+
+        Camera {
+            render,
+            scene,
+            computed,
+        }
+    }
+
+    pub fn render(&self, world: &impl Surface, performance: &Performance, pixels: &mut [u8]) {
+        console_log!("start rendering");
+        let render_start_time = performance.now();
+
+        let mut scanline_time_total = 0.0;
+
+        for j in 0..self.computed.image_height {
+            let scanline_start = performance.now();
+
+            for i in 0..self.render.image_width {
+                let mut pixel_color = color(0.0, 0.0, 0.0);
+
+                for _ in 0..self.render.samples_per_pixel {
+                    let ray = self.get_ray(i as f64, j as f64);
+                    pixel_color = pixel_color + Self::ray_color(ray, world);
+                }
+
+                let pixel_color = pixel_color / self.render.samples_per_pixel as f64;
+
+                self.write_color(i, j, pixels, pixel_color);
+            }
+
+            let scanline_time = performance.now() - scanline_start;
+            scanline_time_total += scanline_time;
+            console_log!(
+                "scanlines remaining: {}, took {}ms",
+                self.computed.image_height - j,
+                scanline_time
+            );
+        }
+
+        console_log!(
+            "finished rendering, took {}ms with average {}ms per scanline",
+            performance.now() - render_start_time,
+            scanline_time_total / self.computed.image_height as f64
+        );
+    }
+
+    fn ray_color(ray: Ray, world: &impl Surface) -> Color {
+        if let Some(hit) = world.hit(ray, interval(0.0, f64::INFINITY)) {
+            return 0.5 * (color(1.0, 1.0, 1.0) + hit.normal);
+        }
+
+        let unit_direction = ray.direction.unit_vector();
+        let a = 0.5 * (unit_direction.y() + 1.0);
+        color(1.0, 1.0, 1.0) * (1.0 - a) + color(0.5, 0.7, 1.0) * a
+    }
+
+    fn get_ray(&self, i: f64, j: f64) -> Ray {
+        let offset = Self::sample_square();
+        let pixel_sample = self.computed.first_pixel_location
+            + ((i + offset.x()) * self.computed.pixel_delta_u)
+            + ((j + offset.y()) * self.computed.pixel_delta_v);
+
+        let origin = self.computed.center;
+        let direction = (pixel_sample - origin).as_arrow();
+        Ray::new(origin, direction)
+    }
+
+    fn sample_square() -> Arrow {
+        arrow(
+            Interval::UNIT.random_double() - 0.5,
+            Interval::UNIT.random_double() - 0.5,
+            0.0,
+        )
+    }
+
+    fn write_color(&self, i: usize, j: usize, pixels: &mut [u8], color: Color) {
+        let index = (j * self.render.image_width + i) * 4;
+        let intensity = interval(0.000, 0.999);
+        pixels[index] = (256.0 * intensity.clamp(color.r())) as _;
+        pixels[index + 1] = (256.0 * intensity.clamp(color.g())) as _;
+        pixels[index + 2] = (256.0 * intensity.clamp(color.b())) as _;
+        pixels[index + 3] = 255;
+    }
+}

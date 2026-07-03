@@ -1,7 +1,7 @@
 use std::{
     fmt::Display,
     marker::PhantomData,
-    ops::{Add, Div, Index, IndexMut, Mul, Sub},
+    ops::{Add, Div, Index, IndexMut, Mul, Neg, Sub},
 };
 
 pub fn vec3(x: f64, y: f64, z: f64) -> Vec3 {
@@ -87,6 +87,14 @@ impl<T> IndexMut<usize> for Vec3<T> {
             2 => &mut self.2,
             _ => panic!("invalid vec3 index"),
         }
+    }
+}
+
+impl<T: Copy> Neg for Vec3<T> {
+    type Output = Vec3<T>;
+
+    fn neg(self) -> Self::Output {
+        self.map(|a| -a)
     }
 }
 
@@ -184,7 +192,7 @@ impl Display for Vec3<()> {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd)]
 pub struct PointMarker;
 pub type Point = Vec3<PointMarker>;
 impl Display for Point {
@@ -193,7 +201,7 @@ impl Display for Point {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd)]
 pub struct ArrowMarker;
 pub type Arrow = Vec3<ArrowMarker>;
 impl Display for Arrow {
@@ -202,7 +210,7 @@ impl Display for Arrow {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd)]
 pub struct ColorMarker;
 pub type Color = Vec3<ColorMarker>;
 impl Display for Color {
@@ -212,19 +220,19 @@ impl Display for Color {
 }
 
 impl<T> Vec3<T> {
-    pub fn vec3(self) -> Vec3 {
+    pub fn as_vec3(self) -> Vec3 {
         Vec3::new(self.0, self.1, self.2)
     }
 
-    pub fn point(self) -> Point {
+    pub fn as_point(self) -> Point {
         Point::new(self.0, self.1, self.2)
     }
 
-    pub fn arrow(self) -> Arrow {
+    pub fn as_arrow(self) -> Arrow {
         Arrow::new(self.0, self.1, self.2)
     }
 
-    pub fn color(self) -> Color {
+    pub fn as_color(self) -> Color {
         Color::new(self.0, self.1, self.2)
     }
 
