@@ -31,17 +31,25 @@ pub fn draw(aspect_ratio: f64) {
     );
 
     // Render
+    let batch_amount = 100;
+    let mut batch = Vec::with_capacity(3 * batch_amount);
     let worker = worker_scope();
-    camera.render(&scene.world, |[i, j], [r, g, b]| {
+
+    camera.render_shotgun(&scene.world, &mut |[i, j], [r, g, b]| {
         let color: u32 = (255 << 24) | ((b as u32) << 16) | ((g as u32) << 8) | r as u32;
-        let pixel = [i as u32, j as u32, color];
+        batch.extend_from_slice(&[i as u32, j as u32, color]);
 
-        let buffer = ArrayBuffer::new(4 * pixel.len() as u32);
-        let view = Uint32Array::new(&buffer);
-        view.copy_from(&pixel);
+        if batch.len() >= 3 * batch_amount {
+            // Surely there's a way to optimize this to avoid the copy?
+            let buffer = ArrayBuffer::new(4 * 3 * batch_amount as u32);
+            let view = Uint32Array::new(&buffer);
+            view.copy_from(&batch);
 
-        worker
-            .post_message_with_transfer(&buffer, &Array::of1(&buffer))
-            .unwrap();
+            worker
+                .post_message_with_transfer(&buffer, &Array::of1(&buffer))
+                .unwrap();
+
+            batch.clear();
+        }
     });
 }

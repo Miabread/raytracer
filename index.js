@@ -14,17 +14,25 @@ let imageData = null;
 let buffer = null;
 
 worker.onmessage = (/** @type {MessageEvent<ArrayBuffer>} */ e) => {
-    const [i, j, color] = new Uint32Array(e.data);
-    e.data.transfer(0);
+    const array = new Uint32Array(e.data);
 
     if (!imageData || !buffer) {
+        const [i, j] = array;
         canvas.width = i;
         canvas.height = j;
         imageData = ctx.createImageData(i, j);
         buffer = new Uint32Array(imageData.data.buffer);
     }
 
-    buffer[j * canvas.width + i] = color;
+    for (let n = 0; n < array.length; n += 3) {
+        const i = array[n];
+        const j = array[n + 1];
+        const color = array[n + 2];
+
+        buffer[j * canvas.width + i] = color;
+    }
+
+    e.data.transfer(0);
 };
 
 const render = () => {

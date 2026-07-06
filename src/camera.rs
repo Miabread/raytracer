@@ -1,3 +1,5 @@
+use js_sys::Math;
+
 use crate::{
     surface::{Ray, Surface},
     util::{Interval, interval},
@@ -93,28 +95,66 @@ impl Camera {
         }
     }
 
-    pub fn render(
+    pub fn render_scanline(
         &mut self,
         world: &impl Surface,
-        mut write_pixel: impl FnMut([usize; 2], [u8; 3]),
+        write_pixel: &mut impl FnMut([usize; 2], [u8; 3]),
     ) {
         for n in 0..self.render.samples_per_pixel {
             for j in (0..self.computed.image_height).rev() {
                 for i in (0..self.render.image_width).rev() {
-                    let index = j * self.render.image_width + i;
-
-                    let pixel_color = self.pixel_color[index];
-
-                    let ray = self.get_ray(i as f64, j as f64);
-                    let color = Self::get_color(ray, self.render.max_depth, world);
-
-                    let pixel_color = pixel_color + color;
-                    self.pixel_color[index] = pixel_color;
-
-                    write_pixel([i, j], self.convert_color(pixel_color / n as f64));
+                    self.render_pixel(i, j, n, world, write_pixel);
                 }
             }
         }
+    }
+
+    pub fn render_shotgun(
+        &mut self,
+        world: &impl Surface,
+        write_pixel: &mut impl FnMut([usize; 2], [u8; 3]),
+    ) {
+        self.render_pixel(
+            self.render.image_width - 1,
+            self.computed.image_height - 1,
+            0,
+            world,
+            write_pixel,
+        );
+
+        let mut pixel_count = vec![0; self.render.image_width * self.computed.image_height];
+
+        loop {
+            let i = Math::floor(Math::random() * self.render.image_width as f64) as usize;
+            let j = Math::floor(Math::random() * self.computed.image_height as f64) as usize;
+
+            let index = j * self.render.image_width + i;
+            pixel_count[index] += 1;
+            let n = pixel_count[index];
+
+            self.render_pixel(i, j, n, world, write_pixel);
+        }
+    }
+
+    pub fn render_pixel(
+        &mut self,
+        i: usize,
+        j: usize,
+        n: usize,
+        world: &impl Surface,
+        write_pixel: &mut impl FnMut([usize; 2], [u8; 3]),
+    ) {
+        let index = j * self.render.image_width + i;
+
+        let pixel_color = self.pixel_color[index];
+
+        let ray = self.get_ray(i as f64, j as f64);
+        let color = Self::get_color(ray, self.render.max_depth, world);
+
+        let pixel_color = pixel_color + color;
+        self.pixel_color[index] = pixel_color;
+
+        write_pixel([i, j], self.convert_color(pixel_color / n as f64));
     }
 
     fn get_color(ray: Ray, depth: usize, world: &impl Surface) -> Color {
