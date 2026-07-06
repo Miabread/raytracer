@@ -10,12 +10,14 @@ console.log('worker posted');
 
 /** @type {ImageData} */
 let imageData = null;
-let buf32 = null;
+/** @type {Uint32Array} */
+let buffer = null;
 
-worker.onmessage = (/** @type {MessageEvent} */ e) => {
-    const [i, j, color] = e.data;
+worker.onmessage = (/** @type {MessageEvent<ArrayBuffer>} */ e) => {
+    const [i, j, color] = new Uint32Array(e.data);
+    e.data.transfer(0);
 
-    if (!imageData) {
+    if (!imageData || !buffer) {
         canvas.width = i;
         canvas.height = j;
         imageData = ctx.createImageData(i, j);

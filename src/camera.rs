@@ -1,7 +1,6 @@
 use crate::{
-    console_log,
     surface::{Ray, Surface},
-    util::{Interval, interval, performance},
+    util::{Interval, interval},
     vec3::{Arrow, Color, Point, arrow, color, point, vec3},
 };
 
@@ -54,6 +53,7 @@ pub struct Camera {
     render: CameraRenderOptions,
     scene: CameraSceneOptions,
     computed: CameraComputed,
+    pixel_color: Vec<Color>,
 }
 
 impl Camera {
@@ -83,50 +83,38 @@ impl Camera {
             pixel_delta_v,
         };
 
+        let pixel_color = vec![color(0.0, 0.0, 0.0); render.image_width * image_height];
+
         Camera {
             render,
             scene,
             computed,
+            pixel_color,
         }
     }
 
-    pub fn render(&self, world: &impl Surface, mut write_pixel: impl FnMut([usize; 2], [u8; 3])) {
-        console_log!("start rendering");
-        let performance = performance();
-        let render_start_time = performance.now();
+    pub fn render(
+        &mut self,
+        world: &impl Surface,
+        mut write_pixel: impl FnMut([usize; 2], [u8; 3]),
+    ) {
+        for n in 0..self.render.samples_per_pixel {
+            for j in (0..self.computed.image_height).rev() {
+                for i in (0..self.render.image_width).rev() {
+                    let index = j * self.render.image_width + i;
 
-        let mut scanline_time_total = 0.0;
+                    let pixel_color = self.pixel_color[index];
 
-        for j in (0..self.computed.image_height).rev() {
-            let scanline_start = performance.now();
-
-            for i in (0..self.render.image_width).rev() {
-                let mut pixel_color = color(0.0, 0.0, 0.0);
-
-                for _ in 0..self.render.samples_per_pixel {
                     let ray = self.get_ray(i as f64, j as f64);
-                    pixel_color = pixel_color + Self::get_color(ray, self.render.max_depth, world);
+                    let color = Self::get_color(ray, self.render.max_depth, world);
+
+                    let pixel_color = pixel_color + color;
+                    self.pixel_color[index] = pixel_color;
+
+                    write_pixel([i, j], self.convert_color(pixel_color / n as f64));
                 }
-
-                let pixel_color = pixel_color / self.render.samples_per_pixel as f64;
-
-                write_pixel([i, j], self.convert_color(pixel_color));
             }
-
-            let scanline_time = performance.now() - scanline_start;
-            scanline_time_total += scanline_time;
-            console_log!(
-                "scanlines remaining: {}, took {}ms",
-                self.computed.image_height - j,
-                scanline_time
-            );
         }
-
-        console_log!(
-            "finished rendering, took {}ms with average {}ms per scanline",
-            performance.now() - render_start_time,
-            scanline_time_total / self.computed.image_height as f64
-        );
     }
 
     fn get_color(ray: Ray, depth: usize, world: &impl Surface) -> Color {
