@@ -31,8 +31,8 @@ pub struct CameraSceneOptions {
     pub look_from: Point,
     pub look_at: Point,
     pub v_up: Arrow,
-    // pub defocus_angle: f64,
-    // pub focus_distance: f64,
+    pub defocus_angle: f64,
+    pub focus_distance: f64,
 }
 
 #[allow(clippy::derivable_impls)]
@@ -43,6 +43,8 @@ impl Default for CameraSceneOptions {
             look_from: point(0.0, 0.0, 0.0),
             look_at: point(0.0, 0.0, -1.0),
             v_up: arrow(0.0, 1.0, 0.0),
+            defocus_angle: 0.0,
+            focus_distance: 10.0,
         }
     }
 }
@@ -52,9 +54,8 @@ struct CameraComputed {
     first_pixel_location: Point,
     pixel_delta_u: Arrow,
     pixel_delta_v: Arrow,
-    // u: Arrow,
-    // v: Arrow,
-    // w: Arrow,
+    defocus_disk_u: Arrow,
+    defocus_disk_v: Arrow,
 }
 
 #[allow(dead_code)]
@@ -70,10 +71,9 @@ impl Camera {
         let image_height = (render.image_width as f64 / render.aspect_ratio).max(1.0) as usize;
 
         // Viewport dimensions
-        let focal_length = (scene.look_from - scene.look_at).length();
         let theta = scene.vertical_fov.to_radians();
         let h = (theta / 2.0).tan();
-        let viewport_height = 2.0 * h * focal_length;
+        let viewport_height = 2.0 * h * scene.focus_distance;
         let viewport_width = viewport_height * (render.image_width as f64 / image_height as f64);
 
         // Camera basis vectors
@@ -89,14 +89,21 @@ impl Camera {
         let pixel_delta_v = viewport_v / image_height as f64;
 
         let viewport_upper_left =
-            scene.look_from - (focal_length * w) - viewport_u / 2.0 - viewport_v / 2.0;
+            scene.look_from - (scene.focus_distance * w) - viewport_u / 2.0 - viewport_v / 2.0;
         let first_pixel_location = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
+
+        // Defocus disk basis vectors
+        let defocus_radius = scene.focus_distance * (scene.defocus_angle / 2.0).to_radians().tan();
+        let defocus_disk_u = u * defocus_radius;
+        let defocus_disk_v = v * defocus_radius;
 
         let computed = CameraComputed {
             image_height,
             first_pixel_location,
             pixel_delta_u,
             pixel_delta_v,
+            defocus_disk_u,
+            defocus_disk_v,
         };
 
         let pixel_color = vec![color(0.0, 0.0, 0.0); render.image_width * image_height];
@@ -115,7 +122,7 @@ impl Camera {
         write_pixel: &mut impl FnMut([usize; 2], [u8; 3]),
     ) {
         // By protocol, first pixel sent determines canvas width and height, so we make sure to start the loop with it
-        for n in 0..self.render.samples_per_pixel {
+        for n in 1..self.render.samples_per_pixel {
             for j in (0..self.computed.image_height).rev() {
                 for i in (0..self.render.image_width).rev() {
                     self.render_pixel(i, j, n, world, write_pixel);
@@ -201,8 +208,16 @@ impl Camera {
             + ((i + offset.x()) * self.computed.pixel_delta_u)
             + ((j + offset.y()) * self.computed.pixel_delta_v);
 
-        let origin = self.scene.look_from;
+        let origin = if self.scene.defocus_angle <= 0.0 {
+            self.scene.look_from
+        } else {
+            let p = Point::random_in_unit_disk();
+            self.scene.look_from
+                + (p.x() * self.computed.defocus_disk_u)
+                + (p.y() * self.computed.defocus_disk_v)
+        };
         let direction = (pixel_sample - origin).as_arrow();
+
         Ray::new(origin, direction)
     }
 

@@ -54,6 +54,18 @@ impl<T: Copy> Vec3<T> {
             -on_unit_sphere
         }
     }
+    pub fn random_in_unit_disk() -> Self {
+        loop {
+            let p = Self::new(
+                Interval::DIAM.random_double(),
+                Interval::DIAM.random_double(),
+                0.0,
+            );
+            if p.length_squared() < 1.0 {
+                return p;
+            }
+        }
+    }
 
     pub fn map(self, mut func: impl FnMut(f64) -> f64) -> Self {
         Self::new(func(self.0), func(self.1), func(self.2))
