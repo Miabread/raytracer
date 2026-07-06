@@ -13,11 +13,11 @@ pub fn draw(aspect_ratio: f64) {
     console_error_panic_hook::set_once();
 
     // Scene
-    let scene = scene::moving_spheres();
+    let scene = scene::perlin_spheres();
 
     let mut camera = Camera::new(
         CameraRenderOptions {
-            image_width: 400,
+            image_width: 1000,
             aspect_ratio,
             samples_per_pixel: 100,
             max_depth: 10,

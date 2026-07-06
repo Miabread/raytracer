@@ -4,11 +4,12 @@ use crate::{
     camera::CameraSceneOptions,
     components::{
         material::{Dielectric, Lambert, Material, MaterialEnum, Metal},
+        noise::Perlin,
         surface::{
             primitive::Sphere,
             structure::{BoundingVolumeHierarchy, SurfaceList},
         },
-        texture::Checker,
+        texture::{Checker, NoiseTexture},
     },
     util::{
         interval::Interval,
@@ -186,6 +187,28 @@ pub fn checkered_spheres() -> Scene {
         10.0,
         material.clone(),
     ));
+
+    Scene {
+        world: world.into(),
+        camera: CameraSceneOptions {
+            vertical_fov: 20.0,
+            look_from: point(13.0, 2.0, 3.0),
+            look_at: point(0.0, 0.0, 0.0),
+            ..Default::default()
+        },
+    }
+}
+
+pub fn perlin_spheres() -> Scene {
+    let mut world = SurfaceList::new();
+
+    let material = Lambert::new(NoiseTexture::new(Perlin::new())).shared();
+    world.add(Sphere::stationary(
+        point(0.0, -1000.0, 0.0),
+        1000.0,
+        material.clone(),
+    ));
+    world.add(Sphere::stationary(point(0.0, 2.0, 0.0), 2.0, material));
 
     Scene {
         world: world.into(),

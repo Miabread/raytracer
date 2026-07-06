@@ -113,6 +113,10 @@ impl<T: Copy> Vec3<T> {
         let parallel = (1.0 - perpendicular.length_squared()).abs().sqrt() * -rhs;
         perpendicular + parallel
     }
+
+    pub fn floor(self) -> Self {
+        Self::new(self.0.floor(), self.1.floor(), self.2.floor())
+    }
 }
 
 impl<T> Index<usize> for Vec3<T> {

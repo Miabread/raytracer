@@ -69,7 +69,7 @@ impl Interval {
     }
 
     pub fn random_integer(&self) -> usize {
-        rng().random_range((self.min as usize)..(self.max as usize))
+        rng().random_range(self.min..=self.max).floor() as usize
     }
 }
 

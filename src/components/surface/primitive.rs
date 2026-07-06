@@ -1,3 +1,5 @@
+use std::f64::consts::PI;
+
 use crate::{
     components::{
         material::MaterialEnum,
@@ -85,14 +87,20 @@ impl Surface for Sphere {
         let t = root;
         let point = ray.at(t);
         let outward_normal = (point - current_center).as_arrow() / self.radius;
+
+        let theta = (-point.y()).acos();
+        let phi = (-point.z()).atan2(point.x()) + PI;
+        let u = phi / (2.0 * PI);
+        let v = theta / PI;
+
         Some(HitResult::new(
             t,
             point,
             ray,
             outward_normal,
             &self.material,
-            0.0,
-            0.0,
+            u,
+            v,
         ))
     }
 

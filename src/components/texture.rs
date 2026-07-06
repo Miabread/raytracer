@@ -2,7 +2,10 @@ use std::rc::Rc;
 
 use enum_dispatch::enum_dispatch;
 
-use crate::util::vec3::{Color, Point};
+use crate::{
+    components::noise::{Noise, NoiseEnum},
+    util::vec3::{Color, Point, color},
+};
 
 #[enum_dispatch]
 #[derive(Debug, Clone)]
@@ -10,6 +13,7 @@ pub enum TextureEnum {
     Shared,
     SolidColor,
     Checker,
+    NoiseTexture,
 }
 
 #[enum_dispatch(TextureEnum)]
@@ -32,8 +36,8 @@ pub struct Shared {
 }
 
 impl Texture for Shared {
-    fn value(&self, u: f64, v: f64, p: Point) -> Color {
-        self.inner.value(u, v, p)
+    fn value(&self, u: f64, v: f64, point: Point) -> Color {
+        self.inner.value(u, v, point)
     }
 }
 
@@ -49,7 +53,7 @@ impl SolidColor {
 }
 
 impl Texture for SolidColor {
-    fn value(&self, _u: f64, _v: f64, _p: Point) -> Color {
+    fn value(&self, _u: f64, _v: f64, _point: Point) -> Color {
         self.albedo
     }
 }
@@ -78,15 +82,33 @@ impl Checker {
 }
 
 impl Texture for Checker {
-    fn value(&self, u: f64, v: f64, p: Point) -> Color {
-        let x = (self.inverse_scale * p.x()).floor() as i32;
-        let y = (self.inverse_scale * p.y()).floor() as i32;
-        let z = (self.inverse_scale * p.z()).floor() as i32;
+    fn value(&self, u: f64, v: f64, point: Point) -> Color {
+        let p = (self.inverse_scale * point).floor();
+        let is_even = (p.x() as i32 + p.y() as i32 + p.z() as i32) % 2 == 0;
 
-        if (x + y + z) % 2 == 0 {
-            self.even.value(u, v, p)
+        if is_even {
+            self.even.value(u, v, point)
         } else {
-            self.odd.value(u, v, p)
+            self.odd.value(u, v, point)
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct NoiseTexture {
+    noise: NoiseEnum,
+}
+
+impl NoiseTexture {
+    pub fn new(noise: impl Into<NoiseEnum>) -> Self {
+        Self {
+            noise: noise.into(),
+        }
+    }
+}
+
+impl Texture for NoiseTexture {
+    fn value(&self, _u: f64, _v: f64, point: Point) -> Color {
+        color(1.0, 1.0, 1.0) * self.noise.noise(point)
     }
 }
