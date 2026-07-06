@@ -25,6 +25,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "enum_dispatch"
+version = "0.3.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa18ce2bc66555b3218614519ac839ddb759a7d6720732f979ef8d13be147ecd"
+dependencies = [
+ "once_cell",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "futures-core"
 version = "0.3.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -94,6 +106,7 @@ name = "raytracer"
 version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",
+ "enum_dispatch",
  "js-sys",
  "wasm-bindgen",
  "web-sys",

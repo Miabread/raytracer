@@ -1,6 +1,7 @@
 use js_sys::Math;
 
 use crate::{
+    material::Material,
     surface::{Ray, Surface},
     util::{Interval, interval},
     vec3::{Arrow, Color, Point, arrow, color, point},

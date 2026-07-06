@@ -1,8 +1,8 @@
-use std::{f64::consts::PI, rc::Rc};
+use std::f64::consts::PI;
 
 use crate::{
     camera::CameraSceneOptions,
-    material::{Dielectric, Lambert, Material, Metal},
+    material::{Dielectric, Lambert, MaterialEnum, Metal},
     surface::{Sphere, SurfaceList},
     util::Interval,
     vec3::{Color, color, point},
@@ -16,38 +16,22 @@ pub struct Scene {
 pub fn first() -> Scene {
     let mut world = SurfaceList::new();
 
-    let material_ground = Rc::new(Lambert::new(color(0.8, 0.8, 0.0)));
-    let material_center = Rc::new(Lambert::new(color(0.1, 0.2, 0.5)));
-    let material_left = Rc::new(Dielectric::new(1.50));
-    let material_bubble = Rc::new(Dielectric::new(1.00 / 1.50));
-    let material_right = Rc::new(Metal::new(color(0.8, 0.6, 0.2), 1.0));
+    let material_ground = Lambert::new(color(0.8, 0.8, 0.0));
+    let material_center = Lambert::new(color(0.1, 0.2, 0.5));
+    let material_left = Dielectric::new(1.50);
+    let material_bubble = Dielectric::new(1.00 / 1.50);
+    let material_right = Metal::new(color(0.8, 0.6, 0.2), 1.0);
 
-    world.add(Rc::new(Sphere::new(
+    world.add(Sphere::new(
         point(0.0, -100.5, -10.0),
         100.0,
         material_ground,
-    )));
-    world.add(Rc::new(Sphere::new(
-        point(0.0, 0.0, -1.2),
-        0.5,
-        material_center,
-    )));
+    ));
+    world.add(Sphere::new(point(0.0, 0.0, -1.2), 0.5, material_center));
 
-    world.add(Rc::new(Sphere::new(
-        point(-1.0, 0.0, -1.0),
-        0.5,
-        material_left,
-    )));
-    world.add(Rc::new(Sphere::new(
-        point(-1.0, 0.0, -1.0),
-        0.4,
-        material_bubble,
-    )));
-    world.add(Rc::new(Sphere::new(
-        point(1.0, 0.0, -1.0),
-        0.5,
-        material_right,
-    )));
+    world.add(Sphere::new(point(-1.0, 0.0, -1.0), 0.5, material_left));
+    world.add(Sphere::new(point(-1.0, 0.0, -1.0), 0.4, material_bubble));
+    world.add(Sphere::new(point(1.0, 0.0, -1.0), 0.5, material_right));
 
     Scene {
         world,
@@ -64,11 +48,11 @@ pub fn second() -> Scene {
 
     let r = (PI / 4.0).cos();
 
-    let material_left = Rc::new(Lambert::new(color(0.0, 0.0, 1.0)));
-    let material_right = Rc::new(Lambert::new(color(1.0, 0.0, 0.0)));
+    let material_left = Lambert::new(color(0.0, 0.0, 1.0));
+    let material_right = Lambert::new(color(1.0, 0.0, 0.0));
 
-    world.add(Rc::new(Sphere::new(point(-r, 0.0, -1.0), r, material_left)));
-    world.add(Rc::new(Sphere::new(point(r, 0.0, -1.0), r, material_right)));
+    world.add(Sphere::new(point(-r, 0.0, -1.0), r, material_left));
+    world.add(Sphere::new(point(r, 0.0, -1.0), r, material_right));
 
     Scene {
         world,
@@ -82,12 +66,12 @@ pub fn second() -> Scene {
 pub fn moving_spheres() -> Scene {
     let mut world = SurfaceList::new();
 
-    let material_ground = Rc::new(Lambert::new(color(0.5, 0.5, 0.5)));
-    world.add(Rc::new(Sphere::new(
+    let material_ground = Lambert::new(color(0.5, 0.5, 0.5));
+    world.add(Sphere::new(
         point(0.0, -1000.0, 0.0),
         1000.0,
         material_ground,
-    )));
+    ));
 
     let rand = || Interval::UNIT.random_double();
 
@@ -100,29 +84,29 @@ pub fn moving_spheres() -> Scene {
                 continue;
             }
 
-            let material = if choose_material < 0.8 {
+            let material: MaterialEnum = if choose_material < 0.8 {
                 let albedo = Color::random(Interval::UNIT) * Color::random(Interval::UNIT);
-                Rc::new(Lambert::new(albedo)) as Rc<dyn Material>
+                Lambert::new(albedo).into()
             } else if choose_material < 0.95 {
                 let albedo = Color::random(Interval::UNIT) * Color::random(Interval::UNIT);
                 let fuzz = Interval::new(0.0, 0.5).random_double();
-                Rc::new(Metal::new(albedo, fuzz)) as Rc<dyn Material>
+                Metal::new(albedo, fuzz).into()
             } else {
-                Rc::new(Dielectric::new(1.5)) as Rc<dyn Material>
+                Dielectric::new(1.5).into()
             };
 
-            world.add(Rc::new(Sphere::new(center, 0.2, material)));
+            world.add(Sphere::new(center, 0.2, material));
         }
     }
 
-    let material1 = Rc::new(Dielectric::new(1.5));
-    world.add(Rc::new(Sphere::new(point(0.0, 1.0, 0.0), 1.0, material1)));
+    let material1 = Dielectric::new(1.5);
+    world.add(Sphere::new(point(0.0, 1.0, 0.0), 1.0, material1));
 
-    let material2 = Rc::new(Lambert::new(color(0.4, 0.2, 0.1)));
-    world.add(Rc::new(Sphere::new(point(-4.0, 1.0, 0.0), 1.0, material2)));
+    let material2 = Lambert::new(color(0.4, 0.2, 0.1));
+    world.add(Sphere::new(point(-4.0, 1.0, 0.0), 1.0, material2));
 
-    let material3 = Rc::new(Metal::new(color(0.7, 0.6, 0.5), 0.0));
-    world.add(Rc::new(Sphere::new(point(4.0, 1.0, 0.0), 1.0, material3)));
+    let material3 = Metal::new(color(0.7, 0.6, 0.5), 0.0);
+    world.add(Sphere::new(point(4.0, 1.0, 0.0), 1.0, material3));
 
     Scene {
         world,

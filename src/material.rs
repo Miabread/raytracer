@@ -1,3 +1,5 @@
+use enum_dispatch::enum_dispatch;
+
 use crate::{
     surface::{HitResult, Ray},
     util::Interval,
@@ -10,10 +12,20 @@ pub struct MaterialResult {
     pub scattered: Ray,
 }
 
+#[enum_dispatch]
+#[derive(Clone)]
+pub enum MaterialEnum {
+    Lambert,
+    Metal,
+    Dielectric,
+}
+
+#[enum_dispatch(MaterialEnum)]
 pub trait Material {
     fn scatter(&self, ray: Ray, hit: HitResult) -> Option<MaterialResult>;
 }
 
+#[derive(Clone)]
 pub struct Lambert {
     pub albedo: Color,
 }
@@ -39,6 +51,7 @@ impl Material for Lambert {
     }
 }
 
+#[derive(Clone)]
 pub struct Metal {
     pub albedo: Color,
     pub fuzz: f64,
@@ -63,6 +76,7 @@ impl Material for Metal {
     }
 }
 
+#[derive(Clone)]
 pub struct Dielectric {
     pub refraction_index: f64,
 }

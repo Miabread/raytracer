@@ -1,7 +1,7 @@
-use std::rc::Rc;
+use enum_dispatch::enum_dispatch;
 
 use crate::{
-    material::Material,
+    material::MaterialEnum,
     util::{Interval, interval},
     vec3::{Arrow, Point},
 };
@@ -23,21 +23,21 @@ impl Ray {
 }
 
 #[derive(Clone)]
-pub struct HitResult {
+pub struct HitResult<'a> {
     pub t: f64,
     pub point: Point,
     pub normal: Arrow,
     pub front_face: bool,
-    pub material: Rc<dyn Material>,
+    pub material: &'a MaterialEnum,
 }
 
-impl HitResult {
+impl<'a> HitResult<'a> {
     fn new(
         t: f64,
         point: Point,
         ray: Ray,
         outward_normal: Arrow,
-        material: Rc<dyn Material>,
+        material: &'a MaterialEnum,
     ) -> Self {
         let front_face = ray.direction.dot(outward_normal) < 0.0;
         let normal = if front_face {
@@ -55,28 +55,37 @@ impl HitResult {
     }
 }
 
-pub trait Surface {
-    fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitResult>;
+#[enum_dispatch]
+#[derive(Clone)]
+pub enum SurfaceEnum {
+    Sphere,
+    SurfaceList,
 }
 
+#[enum_dispatch(SurfaceEnum)]
+pub trait Surface {
+    fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitResult<'_>>;
+}
+
+#[derive(Clone)]
 pub struct Sphere {
     center: Point,
     radius: f64,
-    material: Rc<dyn Material>,
+    material: MaterialEnum,
 }
 
 impl Sphere {
-    pub fn new(center: Point, radius: f64, material: Rc<dyn Material>) -> Self {
+    pub fn new(center: Point, radius: f64, material: impl Into<MaterialEnum>) -> Self {
         Self {
             center,
             radius: radius.max(0.0),
-            material,
+            material: material.into(),
         }
     }
 }
 
 impl Surface for Sphere {
-    fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitResult> {
+    fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitResult<'_>> {
         let oc = self.center - ray.origin;
         let a = ray.direction.length_squared();
         let h = ray.direction.dot(oc);
@@ -104,14 +113,14 @@ impl Surface for Sphere {
             point,
             ray,
             outward_normal,
-            self.material.clone(),
+            &self.material,
         ))
     }
 }
 
 #[derive(Clone, Default)]
 pub struct SurfaceList {
-    surfaces: Vec<Rc<dyn Surface>>,
+    surfaces: Vec<SurfaceEnum>,
 }
 
 impl SurfaceList {
@@ -119,13 +128,13 @@ impl SurfaceList {
         Self::default()
     }
 
-    pub fn add(&mut self, surface: Rc<dyn Surface>) {
-        self.surfaces.push(surface);
+    pub fn add(&mut self, surface: impl Into<SurfaceEnum>) {
+        self.surfaces.push(surface.into());
     }
 }
 
 impl Surface for SurfaceList {
-    fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitResult> {
+    fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitResult<'_>> {
         let mut best_hit = None;
         let mut closest_so_far = ray_t.max;
 
