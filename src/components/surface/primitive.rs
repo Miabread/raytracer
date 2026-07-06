@@ -91,6 +91,8 @@ impl Surface for Sphere {
             ray,
             outward_normal,
             &self.material,
+            0.0,
+            0.0,
         ))
     }
 

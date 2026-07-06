@@ -18,6 +18,21 @@ use crate::{
     },
 };
 
+#[enum_dispatch]
+#[derive(Debug, Clone)]
+pub enum SurfaceEnum {
+    Sphere,
+    SurfaceList,
+    BoundingVolumeHierarchy,
+}
+
+#[enum_dispatch(SurfaceEnum)]
+pub trait Surface {
+    fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitResult<'_>>;
+
+    fn bounding_box(&self) -> BoundingBox;
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct Ray {
     pub origin: Point,
@@ -46,6 +61,8 @@ pub struct HitResult<'a> {
     pub normal: Arrow,
     pub front_face: bool,
     pub material: &'a MaterialEnum,
+    pub u: f64,
+    pub v: f64,
 }
 
 impl<'a> HitResult<'a> {
@@ -55,6 +72,8 @@ impl<'a> HitResult<'a> {
         ray: Ray,
         outward_normal: Arrow,
         material: &'a MaterialEnum,
+        u: f64,
+        v: f64,
     ) -> Self {
         let front_face = ray.direction.dot(outward_normal) < 0.0;
         let normal = if front_face {
@@ -68,21 +87,8 @@ impl<'a> HitResult<'a> {
             normal,
             front_face,
             material,
+            u,
+            v,
         }
     }
-}
-
-#[enum_dispatch]
-#[derive(Debug, Clone)]
-pub enum SurfaceEnum {
-    Sphere,
-    SurfaceList,
-    BoundingVolumeHierarchy,
-}
-
-#[enum_dispatch(SurfaceEnum)]
-pub trait Surface {
-    fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitResult<'_>>;
-
-    fn bounding_box(&self) -> BoundingBox;
 }

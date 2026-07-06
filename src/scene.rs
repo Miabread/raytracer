@@ -8,6 +8,7 @@ use crate::{
             primitive::Sphere,
             structure::{BoundingVolumeHierarchy, SurfaceList},
         },
+        texture::Checker,
     },
     util::{
         interval::Interval,
@@ -89,7 +90,11 @@ pub fn second() -> Scene {
 pub fn moving_spheres() -> Scene {
     let mut world = SurfaceList::new();
 
-    let material_ground = Lambert::new(color(0.5, 0.5, 0.5));
+    let material_ground = Lambert::new(Checker::new(
+        0.32,
+        color(0.2, 0.3, 0.1),
+        color(0.9, 0.9, 0.9),
+    ));
     world.add(Sphere::stationary(
         point(0.0, -1000.0, 0.0),
         1000.0,

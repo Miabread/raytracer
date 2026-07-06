@@ -1,7 +1,10 @@
 use enum_dispatch::enum_dispatch;
 
 use crate::{
-    components::surface::{HitResult, Ray},
+    components::{
+        surface::{HitResult, Ray},
+        texture::{Texture, TextureEnum},
+    },
     util::{
         interval::Interval,
         vec3::{Arrow, Color, color},
@@ -29,12 +32,14 @@ pub trait Material {
 
 #[derive(Debug, Clone)]
 pub struct Lambert {
-    pub albedo: Color,
+    texture: TextureEnum,
 }
 
 impl Lambert {
-    pub fn new(albedo: Color) -> Self {
-        Self { albedo }
+    pub fn new(texture: impl Into<TextureEnum>) -> Self {
+        Self {
+            texture: texture.into(),
+        }
     }
 }
 
@@ -47,7 +52,7 @@ impl Material for Lambert {
         }
 
         Some(MaterialResult {
-            attenuation: self.albedo,
+            attenuation: self.texture.value(hit.u, hit.v, hit.point),
             scattered: Ray::new(hit.point, direction, ray.time),
         })
     }
