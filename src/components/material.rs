@@ -15,7 +15,7 @@ pub struct MaterialResult {
 }
 
 #[enum_dispatch]
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum MaterialEnum {
     Lambert,
     Metal,
@@ -27,7 +27,7 @@ pub trait Material {
     fn scatter(&self, ray: Ray, hit: HitResult) -> Option<MaterialResult>;
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Lambert {
     pub albedo: Color,
 }
@@ -53,7 +53,7 @@ impl Material for Lambert {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Metal {
     pub albedo: Color,
     pub fuzz: f64,
@@ -78,7 +78,7 @@ impl Material for Metal {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Dielectric {
     pub refraction_index: f64,
 }

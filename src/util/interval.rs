@@ -4,7 +4,7 @@ pub const fn interval(min: f64, max: f64) -> Interval {
     Interval::new(min, max)
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Interval {
     pub min: f64,
     pub max: f64,
@@ -33,7 +33,8 @@ impl Interval {
             } else {
                 rhs.min
             },
-            if self.max <= rhs.max {
+            // Here lied a bug that took an hour
+            if self.max >= rhs.max {
                 self.max
             } else {
                 rhs.max
@@ -68,6 +69,12 @@ impl Interval {
     }
 
     pub fn random_integer(&self) -> usize {
-        interval(self.min, self.max + 1.0).random_double().round() as usize
+        interval(self.min, self.max).random_double().floor() as usize
+    }
+}
+
+impl Default for Interval {
+    fn default() -> Self {
+        Self::EMPTY
     }
 }

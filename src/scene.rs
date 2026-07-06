@@ -4,7 +4,7 @@ use crate::{
     camera::CameraSceneOptions,
     components::{
         material::{Dielectric, Lambert, MaterialEnum, Metal},
-        surface::{Sphere, SurfaceList},
+        surface::{BoundingVolumeHierarchy, Sphere, SurfaceList},
     },
     util::{
         interval::Interval,
@@ -13,7 +13,7 @@ use crate::{
 };
 
 pub struct Scene {
-    pub world: SurfaceList,
+    pub world: BoundingVolumeHierarchy,
     pub camera: CameraSceneOptions,
 }
 
@@ -54,7 +54,7 @@ pub fn first() -> Scene {
     ));
 
     Scene {
-        world,
+        world: world.into(),
         camera: CameraSceneOptions {
             vertical_fov: 20.0,
             look_from: point(-2.0, 2.0, 1.0),
@@ -75,7 +75,7 @@ pub fn second() -> Scene {
     world.add(Sphere::stationary(point(r, 0.0, -1.0), r, material_right));
 
     Scene {
-        world,
+        world: world.into(),
         camera: CameraSceneOptions {
             vertical_fov: 90.0,
             ..Default::default()
@@ -116,7 +116,8 @@ pub fn moving_spheres() -> Scene {
                 Dielectric::new(1.5).into()
             };
 
-            if Interval::UNIT.random_double() < 0.5 {
+            // if Interval::UNIT.random_double() < 0.5 {
+            if false {
                 let center_end = center_start + point(0.0, Interval::HALF.random_double(), 0.0);
                 world.add(Sphere::moving(center_start, center_end, 0.2, material));
             } else {
@@ -135,7 +136,7 @@ pub fn moving_spheres() -> Scene {
     world.add(Sphere::stationary(point(4.0, 1.0, 0.0), 1.0, material3));
 
     Scene {
-        world,
+        world: world.into(),
         camera: CameraSceneOptions {
             vertical_fov: 20.0,
             look_from: point(13.0, 2.0, 3.0),
