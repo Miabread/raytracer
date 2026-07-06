@@ -100,6 +100,7 @@ impl Camera {
         world: &impl Surface,
         write_pixel: &mut impl FnMut([usize; 2], [u8; 3]),
     ) {
+        // By protocol, first pixel sent determines canvas width and height, so we make sure to start the loop with it
         for n in 0..self.render.samples_per_pixel {
             for j in (0..self.computed.image_height).rev() {
                 for i in (0..self.render.image_width).rev() {
@@ -114,6 +115,7 @@ impl Camera {
         world: &impl Surface,
         write_pixel: &mut impl FnMut([usize; 2], [u8; 3]),
     ) {
+        // By protocol, first pixel sent determines canvas width and height, so we make sure to manually render it
         self.render_pixel(
             self.render.image_width - 1,
             self.computed.image_height - 1,

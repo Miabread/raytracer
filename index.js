@@ -13,16 +13,8 @@ let imageData = null;
 /** @type {Uint32Array} */
 let buffer = null;
 
-worker.onmessage = (/** @type {MessageEvent<ArrayBuffer>} */ e) => {
+const handlePixelBatch = (/** @type {MessageEvent<ArrayBuffer>} */ e) => {
     const array = new Uint32Array(e.data);
-
-    if (!imageData || !buffer) {
-        const [i, j] = array;
-        canvas.width = i;
-        canvas.height = j;
-        imageData = ctx.createImageData(i, j);
-        buffer = new Uint32Array(imageData.data.buffer);
-    }
 
     for (let n = 0; n < array.length; n += 3) {
         const i = array[n];
@@ -33,6 +25,19 @@ worker.onmessage = (/** @type {MessageEvent<ArrayBuffer>} */ e) => {
     }
 
     e.data.transfer(0);
+};
+
+// By protocol, first pixel sent determines canvas width and height
+worker.onmessage = (/** @type {MessageEvent<ArrayBuffer>} */ e) => {
+    worker.onmessage = handlePixelBatch;
+
+    const [i, j] = new Uint32Array(e.data);
+    canvas.width = i;
+    canvas.height = j;
+    imageData = ctx.createImageData(i, j);
+    buffer = new Uint32Array(imageData.data.buffer);
+
+    handlePixelBatch(e);
 };
 
 const render = () => {
