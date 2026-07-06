@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use enum_dispatch::enum_dispatch;
 
 use crate::util::vec3::{Color, Point};
@@ -5,13 +7,34 @@ use crate::util::vec3::{Color, Point};
 #[enum_dispatch]
 #[derive(Debug, Clone)]
 pub enum TextureEnum {
+    Shared,
     SolidColor,
     Checker,
 }
 
 #[enum_dispatch(TextureEnum)]
-pub trait Texture {
+pub trait Texture: Into<TextureEnum> {
     fn value(&self, u: f64, v: f64, p: Point) -> Color;
+
+    fn shared(self) -> Shared
+    where
+        Self: std::marker::Sized,
+    {
+        Shared {
+            inner: Rc::new(self.into()),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Shared {
+    inner: Rc<TextureEnum>,
+}
+
+impl Texture for Shared {
+    fn value(&self, u: f64, v: f64, p: Point) -> Color {
+        self.inner.value(u, v, p)
+    }
 }
 
 #[derive(Debug, Clone)]

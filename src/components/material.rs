@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use enum_dispatch::enum_dispatch;
 
 use crate::{
@@ -20,14 +22,35 @@ pub struct MaterialResult {
 #[enum_dispatch]
 #[derive(Debug, Clone)]
 pub enum MaterialEnum {
+    Shared,
     Lambert,
     Metal,
     Dielectric,
 }
 
 #[enum_dispatch(MaterialEnum)]
-pub trait Material {
+pub trait Material: Into<MaterialEnum> {
     fn scatter(&self, ray: Ray, hit: HitResult) -> Option<MaterialResult>;
+
+    fn shared(self) -> Shared
+    where
+        Self: std::marker::Sized,
+    {
+        Shared {
+            inner: Rc::new(self.into()),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Shared {
+    inner: Rc<MaterialEnum>,
+}
+
+impl Material for Shared {
+    fn scatter(&self, ray: Ray, hit: HitResult) -> Option<MaterialResult> {
+        self.inner.scatter(ray, hit)
+    }
 }
 
 #[derive(Debug, Clone)]

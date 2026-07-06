@@ -3,7 +3,7 @@ use std::f64::consts::PI;
 use crate::{
     camera::CameraSceneOptions,
     components::{
-        material::{Dielectric, Lambert, MaterialEnum, Metal},
+        material::{Dielectric, Lambert, Material, MaterialEnum, Metal},
         surface::{
             primitive::Sphere,
             structure::{BoundingVolumeHierarchy, SurfaceList},
@@ -19,6 +19,16 @@ use crate::{
 pub struct Scene {
     pub world: BoundingVolumeHierarchy,
     pub camera: CameraSceneOptions,
+}
+
+pub fn empty() -> Scene {
+    let world = SurfaceList::new();
+    Scene {
+        world: world.into(),
+        camera: CameraSceneOptions {
+            ..Default::default()
+        },
+    }
 }
 
 pub fn first() -> Scene {
@@ -151,6 +161,38 @@ pub fn moving_spheres() -> Scene {
             look_at: point(0.0, 0.0, 0.0),
             defocus_angle: 0.6,
             focus_distance: 10.0,
+            ..Default::default()
+        },
+    }
+}
+
+pub fn checkered_spheres() -> Scene {
+    let mut world = SurfaceList::new();
+
+    let material = Lambert::new(Checker::new(
+        0.32,
+        color(0.2, 0.3, 0.1),
+        color(0.9, 0.9, 0.9),
+    ))
+    .shared();
+
+    world.add(Sphere::stationary(
+        point(0.0, -10.0, 0.0),
+        10.0,
+        material.clone(),
+    ));
+    world.add(Sphere::stationary(
+        point(0.0, 10.0, 0.0),
+        10.0,
+        material.clone(),
+    ));
+
+    Scene {
+        world: world.into(),
+        camera: CameraSceneOptions {
+            vertical_fov: 20.0,
+            look_from: point(13.0, 2.0, 3.0),
+            look_at: point(0.0, 0.0, 0.0),
             ..Default::default()
         },
     }

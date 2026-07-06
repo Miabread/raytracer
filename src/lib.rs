@@ -16,7 +16,7 @@ pub fn draw(aspect_ratio: f64) {
     console_error_panic_hook::set_once();
 
     // Scene
-    let scene = scene::moving_spheres();
+    let scene = scene::checkered_spheres();
 
     let mut camera = Camera::new(
         CameraRenderOptions {

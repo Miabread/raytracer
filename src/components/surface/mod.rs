@@ -1,6 +1,8 @@
 pub mod primitive;
 pub mod structure;
 
+use std::rc::Rc;
+
 use enum_dispatch::enum_dispatch;
 
 use crate::{
@@ -21,16 +23,41 @@ use crate::{
 #[enum_dispatch]
 #[derive(Debug, Clone)]
 pub enum SurfaceEnum {
+    Shared,
     Sphere,
     SurfaceList,
     BoundingVolumeHierarchy,
 }
 
 #[enum_dispatch(SurfaceEnum)]
-pub trait Surface {
+pub trait Surface: Into<SurfaceEnum> {
     fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitResult<'_>>;
 
     fn bounding_box(&self) -> BoundingBox;
+
+    fn shared(self) -> Shared
+    where
+        Self: std::marker::Sized,
+    {
+        Shared {
+            inner: Rc::new(self.into()),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Shared {
+    inner: Rc<SurfaceEnum>,
+}
+
+impl Surface for Shared {
+    fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitResult<'_>> {
+        self.inner.hit(ray, ray_t)
+    }
+
+    fn bounding_box(&self) -> BoundingBox {
+        self.inner.bounding_box()
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
