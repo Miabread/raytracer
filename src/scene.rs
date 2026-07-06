@@ -4,7 +4,10 @@ use crate::{
     camera::CameraSceneOptions,
     components::{
         material::{Dielectric, Lambert, MaterialEnum, Metal},
-        surface::{BoundingVolumeHierarchy, Sphere, SurfaceList},
+        surface::{
+            primitive::Sphere,
+            structure::{BoundingVolumeHierarchy, SurfaceList},
+        },
     },
     util::{
         interval::Interval,
