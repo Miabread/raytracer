@@ -37,7 +37,7 @@ impl Lambert {
 }
 
 impl Material for Lambert {
-    fn scatter(&self, _ray: Ray, hit: HitResult) -> Option<MaterialResult> {
+    fn scatter(&self, ray: Ray, hit: HitResult) -> Option<MaterialResult> {
         let mut direction = hit.normal + Arrow::random_unit_vector();
 
         if direction.near_zero() {
@@ -46,7 +46,7 @@ impl Material for Lambert {
 
         Some(MaterialResult {
             attenuation: self.albedo,
-            scattered: Ray::new(hit.point, direction),
+            scattered: Ray::new(hit.point, direction, ray.time),
         })
     }
 }
@@ -67,7 +67,7 @@ impl Material for Metal {
     fn scatter(&self, ray: Ray, hit: HitResult) -> Option<MaterialResult> {
         let reflected = ray.direction.reflect(hit.normal).unit_vector()
             + (self.fuzz * Arrow::random_unit_vector());
-        let scattered = Ray::new(hit.point, reflected);
+        let scattered = Ray::new(hit.point, reflected, ray.time);
 
         (scattered.direction.dot(hit.normal) > 0.0).then_some(MaterialResult {
             attenuation: self.albedo,
@@ -120,7 +120,7 @@ impl Material for Dielectric {
 
         Some(MaterialResult {
             attenuation: color(1.0, 1.0, 1.0),
-            scattered: Ray::new(hit.point, direction),
+            scattered: Ray::new(hit.point, direction, ray.time),
         })
     }
 }

@@ -31,6 +31,7 @@ impl Interval {
     pub const EMPTY: Interval = interval(f64::INFINITY, f64::NEG_INFINITY);
     pub const FULL: Interval = interval(f64::NEG_INFINITY, f64::INFINITY);
     pub const UNIT: Interval = interval(0.0, 1.0);
+    pub const HALF: Interval = interval(0.0, 0.5);
     pub const DIAM: Interval = interval(-1.0, 1.0);
 
     pub const fn new(min: f64, max: f64) -> Self {

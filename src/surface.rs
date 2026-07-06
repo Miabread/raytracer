@@ -3,18 +3,23 @@ use enum_dispatch::enum_dispatch;
 use crate::{
     material::MaterialEnum,
     util::{Interval, interval},
-    vec3::{Arrow, Point},
+    vec3::{Arrow, Point, arrow},
 };
 
 #[derive(Debug, Clone, Copy)]
 pub struct Ray {
     pub origin: Point,
     pub direction: Arrow,
+    pub time: f64,
 }
 
 impl Ray {
-    pub fn new(origin: Point, direction: Arrow) -> Self {
-        Self { origin, direction }
+    pub fn new(origin: Point, direction: Arrow, time: f64) -> Self {
+        Self {
+            origin,
+            direction,
+            time,
+        }
     }
 
     pub fn at(self, t: f64) -> Point {
@@ -69,15 +74,32 @@ pub trait Surface {
 
 #[derive(Clone)]
 pub struct Sphere {
-    center: Point,
+    center: Ray,
     radius: f64,
     material: MaterialEnum,
 }
 
 impl Sphere {
-    pub fn new(center: Point, radius: f64, material: impl Into<MaterialEnum>) -> Self {
+    pub fn stationary(
+        static_center: Point,
+        radius: f64,
+        material: impl Into<MaterialEnum>,
+    ) -> Self {
         Self {
-            center,
+            center: Ray::new(static_center, arrow(0.0, 0.0, 0.0), 0.0),
+            radius: radius.max(0.0),
+            material: material.into(),
+        }
+    }
+
+    pub fn moving(
+        center_start: Point,
+        center_end: Point,
+        radius: f64,
+        material: impl Into<MaterialEnum>,
+    ) -> Self {
+        Self {
+            center: Ray::new(center_start, (center_end - center_start).as_arrow(), 0.0),
             radius: radius.max(0.0),
             material: material.into(),
         }
@@ -86,7 +108,8 @@ impl Sphere {
 
 impl Surface for Sphere {
     fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitResult<'_>> {
-        let oc = self.center - ray.origin;
+        let current_center = self.center.at(ray.time);
+        let oc = current_center - ray.origin;
         let a = ray.direction.length_squared();
         let h = ray.direction.dot(oc);
         let c = oc.length_squared() - self.radius * self.radius;
@@ -107,7 +130,7 @@ impl Surface for Sphere {
 
         let t = root;
         let point = ray.at(t);
-        let outward_normal = (point - self.center).as_arrow() / self.radius;
+        let outward_normal = (point - current_center).as_arrow() / self.radius;
         Some(HitResult::new(
             t,
             point,

@@ -218,8 +218,9 @@ impl Camera {
                 + (p.y() * self.computed.defocus_disk_v)
         };
         let direction = (pixel_sample - origin).as_arrow();
+        let time = Interval::UNIT.random_double();
 
-        Ray::new(origin, direction)
+        Ray::new(origin, direction, time)
     }
 
     fn convert_color(&self, color: Color) -> [u8; 3] {

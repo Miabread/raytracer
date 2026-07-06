@@ -22,16 +22,32 @@ pub fn first() -> Scene {
     let material_bubble = Dielectric::new(1.00 / 1.50);
     let material_right = Metal::new(color(0.8, 0.6, 0.2), 1.0);
 
-    world.add(Sphere::new(
+    world.add(Sphere::stationary(
         point(0.0, -100.5, -10.0),
         100.0,
         material_ground,
     ));
-    world.add(Sphere::new(point(0.0, 0.0, -1.2), 0.5, material_center));
+    world.add(Sphere::stationary(
+        point(0.0, 0.0, -1.2),
+        0.5,
+        material_center,
+    ));
 
-    world.add(Sphere::new(point(-1.0, 0.0, -1.0), 0.5, material_left));
-    world.add(Sphere::new(point(-1.0, 0.0, -1.0), 0.4, material_bubble));
-    world.add(Sphere::new(point(1.0, 0.0, -1.0), 0.5, material_right));
+    world.add(Sphere::stationary(
+        point(-1.0, 0.0, -1.0),
+        0.5,
+        material_left,
+    ));
+    world.add(Sphere::stationary(
+        point(-1.0, 0.0, -1.0),
+        0.4,
+        material_bubble,
+    ));
+    world.add(Sphere::stationary(
+        point(1.0, 0.0, -1.0),
+        0.5,
+        material_right,
+    ));
 
     Scene {
         world,
@@ -51,8 +67,8 @@ pub fn second() -> Scene {
     let material_left = Lambert::new(color(0.0, 0.0, 1.0));
     let material_right = Lambert::new(color(1.0, 0.0, 0.0));
 
-    world.add(Sphere::new(point(-r, 0.0, -1.0), r, material_left));
-    world.add(Sphere::new(point(r, 0.0, -1.0), r, material_right));
+    world.add(Sphere::stationary(point(-r, 0.0, -1.0), r, material_left));
+    world.add(Sphere::stationary(point(r, 0.0, -1.0), r, material_right));
 
     Scene {
         world,
@@ -67,20 +83,23 @@ pub fn moving_spheres() -> Scene {
     let mut world = SurfaceList::new();
 
     let material_ground = Lambert::new(color(0.5, 0.5, 0.5));
-    world.add(Sphere::new(
+    world.add(Sphere::stationary(
         point(0.0, -1000.0, 0.0),
         1000.0,
         material_ground,
     ));
 
-    let rand = || Interval::UNIT.random_double();
-
     for a in -11..11 {
         for b in -11..11 {
-            let choose_material = rand();
-            let center = point(a as f64 + 0.9 * rand(), 0.2, b as f64 + 0.9 * rand());
+            let choose_material = Interval::UNIT.random_double();
+            let center_start = point(
+                a as f64 + 0.9 * Interval::UNIT.random_double(),
+                0.2,
+                b as f64 + 0.9 * Interval::UNIT.random_double(),
+            );
+            let center_end = center_start + point(0.0, Interval::HALF.random_double(), 0.0);
 
-            if (center - point(4.0, 0.2, 0.0)).length() <= 0.9 {
+            if (center_start - point(4.0, 0.2, 0.0)).length() <= 0.9 {
                 continue;
             }
 
@@ -89,24 +108,24 @@ pub fn moving_spheres() -> Scene {
                 Lambert::new(albedo).into()
             } else if choose_material < 0.95 {
                 let albedo = Color::random(Interval::UNIT) * Color::random(Interval::UNIT);
-                let fuzz = Interval::new(0.0, 0.5).random_double();
+                let fuzz = Interval::HALF.random_double();
                 Metal::new(albedo, fuzz).into()
             } else {
                 Dielectric::new(1.5).into()
             };
 
-            world.add(Sphere::new(center, 0.2, material));
+            world.add(Sphere::moving(center_start, center_end, 0.2, material));
         }
     }
 
     let material1 = Dielectric::new(1.5);
-    world.add(Sphere::new(point(0.0, 1.0, 0.0), 1.0, material1));
+    world.add(Sphere::stationary(point(0.0, 1.0, 0.0), 1.0, material1));
 
     let material2 = Lambert::new(color(0.4, 0.2, 0.1));
-    world.add(Sphere::new(point(-4.0, 1.0, 0.0), 1.0, material2));
+    world.add(Sphere::stationary(point(-4.0, 1.0, 0.0), 1.0, material2));
 
     let material3 = Metal::new(color(0.7, 0.6, 0.5), 0.0);
-    world.add(Sphere::new(point(4.0, 1.0, 0.0), 1.0, material3));
+    world.add(Sphere::stationary(point(4.0, 1.0, 0.0), 1.0, material3));
 
     Scene {
         world,
