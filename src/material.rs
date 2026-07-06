@@ -1,5 +1,6 @@
 use crate::{
     surface::{HitResult, Ray},
+    util::Interval,
     vec3::{Arrow, Color, color},
 };
 
@@ -72,6 +73,14 @@ impl Dielectric {
     }
 }
 
+impl Dielectric {
+    pub fn reflectance(cosine: f64, refraction_index: f64) -> f64 {
+        let r0 = (1.0 - refraction_index) / (1.0 + refraction_index);
+        let r0 = r0 * r0;
+        r0 + (1.0 - r0) * (1.0 - cosine).powf(5.0)
+    }
+}
+
 impl Material for Dielectric {
     fn scatter(&self, ray: Ray, hit: HitResult) -> Option<MaterialResult> {
         let refraction_index = if hit.front_face {
@@ -83,8 +92,13 @@ impl Material for Dielectric {
         let unit_direction = ray.direction.unit_vector();
         let cos_theta = -unit_direction.dot(hit.normal).min(1.0);
         let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
+        let cannot_refract = refraction_index * sin_theta > 1.0;
 
-        let direction = if refraction_index * sin_theta > 1.0 {
+        let r0 = (1.0 - refraction_index) / (1.0 + refraction_index);
+        let r0 = r0 * r0;
+        let reflectance = r0 + (1.0 - r0) * (1.0 - cos_theta).powf(5.0);
+
+        let direction = if cannot_refract || reflectance > Interval::UNIT.random_double() {
             unit_direction.reflect(hit.normal)
         } else {
             unit_direction.refract(hit.normal, refraction_index)

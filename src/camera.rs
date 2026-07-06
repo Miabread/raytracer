@@ -3,7 +3,7 @@ use js_sys::Math;
 use crate::{
     surface::{Ray, Surface},
     util::{Interval, interval},
-    vec3::{Arrow, Color, Point, arrow, color, point, vec3},
+    vec3::{Arrow, Color, Point, arrow, color, point},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -27,10 +27,10 @@ impl Default for CameraRenderOptions {
 
 #[derive(Debug, Clone, Copy)]
 pub struct CameraSceneOptions {
-    // pub vertical_fox: f64,
-    // pub look_from: Point,
-    // pub look_at: Point,
-    // pub v_up: Arrow,
+    pub vertical_fov: f64,
+    pub look_from: Point,
+    pub look_at: Point,
+    pub v_up: Arrow,
     // pub defocus_angle: f64,
     // pub focus_distance: f64,
 }
@@ -38,16 +38,23 @@ pub struct CameraSceneOptions {
 #[allow(clippy::derivable_impls)]
 impl Default for CameraSceneOptions {
     fn default() -> Self {
-        Self {}
+        Self {
+            vertical_fov: 90.0,
+            look_from: point(0.0, 0.0, 0.0),
+            look_at: point(0.0, 0.0, -1.0),
+            v_up: arrow(0.0, 1.0, 0.0),
+        }
     }
 }
 
 struct CameraComputed {
     image_height: usize,
-    center: Point,
     first_pixel_location: Point,
     pixel_delta_u: Arrow,
     pixel_delta_v: Arrow,
+    // u: Arrow,
+    // v: Arrow,
+    // w: Arrow,
 }
 
 #[allow(dead_code)]
@@ -62,24 +69,31 @@ impl Camera {
     pub fn new(render: CameraRenderOptions, scene: CameraSceneOptions) -> Self {
         let image_height = (render.image_width as f64 / render.aspect_ratio).max(1.0) as usize;
 
-        let focal_length = 1.0;
-        let viewport_height = 2.0;
+        // Viewport dimensions
+        let focal_length = (scene.look_from - scene.look_at).length();
+        let theta = scene.vertical_fov.to_radians();
+        let h = (theta / 2.0).tan();
+        let viewport_height = 2.0 * h * focal_length;
         let viewport_width = viewport_height * (render.image_width as f64 / image_height as f64);
-        let center = point(0.0, 0.0, 0.0);
 
-        let viewport_u = arrow(viewport_width, 0.0, 0.0);
-        let viewport_v = arrow(0.0, -viewport_height, 0.0);
+        // Camera basis vectors
+        let w = (scene.look_from - scene.look_at).unit_vector().as_arrow();
+        let u = scene.v_up.cross(w).unit_vector();
+        let v = w.cross(u);
+
+        // Pixel basis vectors
+        let viewport_u = viewport_width * u;
+        let viewport_v = viewport_height * -v;
 
         let pixel_delta_u = viewport_u / render.image_width as f64;
         let pixel_delta_v = viewport_v / image_height as f64;
 
         let viewport_upper_left =
-            center - vec3(0.0, 0.0, focal_length) - viewport_u / 2.0 - viewport_v / 2.0;
+            scene.look_from - (focal_length * w) - viewport_u / 2.0 - viewport_v / 2.0;
         let first_pixel_location = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
 
         let computed = CameraComputed {
             image_height,
-            center,
             first_pixel_location,
             pixel_delta_u,
             pixel_delta_v,
@@ -187,7 +201,7 @@ impl Camera {
             + ((i + offset.x()) * self.computed.pixel_delta_u)
             + ((j + offset.y()) * self.computed.pixel_delta_v);
 
-        let origin = self.computed.center;
+        let origin = self.scene.look_from;
         let direction = (pixel_sample - origin).as_arrow();
         Ray::new(origin, direction)
     }
