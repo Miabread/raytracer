@@ -3,8 +3,9 @@ use enum_dispatch::enum_dispatch;
 use crate::{
     components::material::MaterialEnum,
     util::{
+        bounding_box::BoundingBox,
         interval::{Interval, interval},
-        vec3::{Arrow, Point, arrow},
+        vec3::{Arrow, Point, arrow, point},
     },
 };
 
@@ -72,6 +73,8 @@ pub enum SurfaceEnum {
 #[enum_dispatch(SurfaceEnum)]
 pub trait Surface {
     fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitResult<'_>>;
+
+    fn bounding_box(&self) -> BoundingBox;
 }
 
 #[derive(Clone)]
@@ -79,6 +82,7 @@ pub struct Sphere {
     center: Ray,
     radius: f64,
     material: MaterialEnum,
+    bounding_box: BoundingBox,
 }
 
 impl Sphere {
@@ -87,10 +91,16 @@ impl Sphere {
         radius: f64,
         material: impl Into<MaterialEnum>,
     ) -> Self {
+        let radius = radius.max(0.0);
+        let radius_vec = point(radius, radius, radius);
         Self {
             center: Ray::new(static_center, arrow(0.0, 0.0, 0.0), 0.0),
-            radius: radius.max(0.0),
+            radius,
             material: material.into(),
+            bounding_box: BoundingBox::corners(
+                static_center - radius_vec,
+                static_center + radius_vec,
+            ),
         }
     }
 
@@ -100,10 +110,19 @@ impl Sphere {
         radius: f64,
         material: impl Into<MaterialEnum>,
     ) -> Self {
+        let center = Ray::new(center_start, (center_end - center_start).as_arrow(), 0.0);
+        let radius = radius.max(0.0);
+        let radius_vec = point(radius, radius, radius);
+        let box_start =
+            BoundingBox::corners(center.at(0.0) - radius_vec, center.at(0.0) + radius_vec);
+        let box_end =
+            BoundingBox::corners(center.at(1.0) - radius_vec, center.at(1.0) + radius_vec);
+
         Self {
-            center: Ray::new(center_start, (center_end - center_start).as_arrow(), 0.0),
-            radius: radius.max(0.0),
+            center,
+            radius,
             material: material.into(),
+            bounding_box: box_start.join(box_end),
         }
     }
 }
@@ -141,11 +160,16 @@ impl Surface for Sphere {
             &self.material,
         ))
     }
+
+    fn bounding_box(&self) -> BoundingBox {
+        self.bounding_box
+    }
 }
 
 #[derive(Clone, Default)]
 pub struct SurfaceList {
     surfaces: Vec<SurfaceEnum>,
+    bounding_box: BoundingBox,
 }
 
 impl SurfaceList {
@@ -154,7 +178,9 @@ impl SurfaceList {
     }
 
     pub fn add(&mut self, surface: impl Into<SurfaceEnum>) {
-        self.surfaces.push(surface.into());
+        let surface = surface.into();
+        self.bounding_box = self.bounding_box.join(surface.bounding_box());
+        self.surfaces.push(surface);
     }
 }
 
@@ -171,5 +197,9 @@ impl Surface for SurfaceList {
         }
 
         best_hit
+    }
+
+    fn bounding_box(&self) -> BoundingBox {
+        self.bounding_box
     }
 }

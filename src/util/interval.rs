@@ -21,6 +21,26 @@ impl Interval {
         Self { min, max }
     }
 
+    pub fn expand(&self, delta: f64) -> Self {
+        let padding = delta / 2.0;
+        Self::new(self.min - padding, self.max + padding)
+    }
+
+    pub fn join(&self, rhs: Interval) -> Self {
+        Self::new(
+            if self.min <= rhs.min {
+                self.min
+            } else {
+                rhs.min
+            },
+            if self.max <= rhs.max {
+                self.max
+            } else {
+                rhs.max
+            },
+        )
+    }
+
     pub const fn size(&self) -> f64 {
         self.max - self.min
     }

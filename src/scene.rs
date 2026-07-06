@@ -101,8 +101,6 @@ pub fn moving_spheres() -> Scene {
                 0.2,
                 b as f64 + 0.9 * Interval::UNIT.random_double(),
             );
-            let center_end = center_start + point(0.0, Interval::HALF.random_double(), 0.0);
-
             if (center_start - point(4.0, 0.2, 0.0)).length() <= 0.9 {
                 continue;
             }
@@ -118,7 +116,12 @@ pub fn moving_spheres() -> Scene {
                 Dielectric::new(1.5).into()
             };
 
-            world.add(Sphere::moving(center_start, center_end, 0.2, material));
+            if Interval::UNIT.random_double() < 0.5 {
+                let center_end = center_start + point(0.0, Interval::HALF.random_double(), 0.0);
+                world.add(Sphere::moving(center_start, center_end, 0.2, material));
+            } else {
+                world.add(Sphere::stationary(center_start, 0.2, material));
+            }
         }
     }
 
