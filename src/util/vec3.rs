@@ -4,7 +4,7 @@ use std::{
     ops::{Add, Div, Index, IndexMut, Mul, Neg, Sub},
 };
 
-use crate::util::Interval;
+use crate::util::interval::Interval;
 
 pub fn vec3(x: f64, y: f64, z: f64) -> Vec3 {
     Vec3::new(x, y, z)

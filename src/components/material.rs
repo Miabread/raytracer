@@ -1,9 +1,11 @@
 use enum_dispatch::enum_dispatch;
 
 use crate::{
-    surface::{HitResult, Ray},
-    util::Interval,
-    vec3::{Arrow, Color, color},
+    components::surface::{HitResult, Ray},
+    util::{
+        interval::Interval,
+        vec3::{Arrow, Color, color},
+    },
 };
 
 #[derive(Debug, Clone, Copy)]

@@ -1,9 +1,7 @@
 pub mod camera;
-pub mod material;
+pub mod components;
 pub mod scene;
-pub mod surface;
 pub mod util;
-pub mod vec3;
 
 use js_sys::{Array, ArrayBuffer, Uint32Array};
 use wasm_bindgen::prelude::*;

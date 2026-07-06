@@ -2,10 +2,14 @@ use std::f64::consts::PI;
 
 use crate::{
     camera::CameraSceneOptions,
-    material::{Dielectric, Lambert, MaterialEnum, Metal},
-    surface::{Sphere, SurfaceList},
-    util::Interval,
-    vec3::{Color, color, point},
+    components::{
+        material::{Dielectric, Lambert, MaterialEnum, Metal},
+        surface::{Sphere, SurfaceList},
+    },
+    util::{
+        interval::Interval,
+        vec3::{Color, color, point},
+    },
 };
 
 pub struct Scene {

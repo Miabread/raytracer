@@ -1,9 +1,11 @@
 use enum_dispatch::enum_dispatch;
 
 use crate::{
-    material::MaterialEnum,
-    util::{Interval, interval},
-    vec3::{Arrow, Point, arrow},
+    components::material::MaterialEnum,
+    util::{
+        interval::{Interval, interval},
+        vec3::{Arrow, Point, arrow},
+    },
 };
 
 #[derive(Debug, Clone, Copy)]
