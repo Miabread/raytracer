@@ -6,17 +6,14 @@ pub mod util;
 use js_sys::{Array, ArrayBuffer, Uint32Array};
 use wasm_bindgen::prelude::*;
 
-use crate::{
-    camera::{Camera, CameraRenderOptions},
-    util::worker_scope,
-};
+use crate::camera::{Camera, CameraRenderOptions};
 
 #[wasm_bindgen]
 pub fn draw(aspect_ratio: f64) {
     console_error_panic_hook::set_once();
 
     // Scene
-    let scene = scene::checkered_spheres();
+    let scene = scene::moving_spheres();
 
     let mut camera = Camera::new(
         CameraRenderOptions {
@@ -50,4 +47,15 @@ pub fn draw(aspect_ratio: f64) {
             batch.clear();
         }
     });
+}
+
+#[macro_export]
+macro_rules! console_log {
+    ($($t:tt)*) => (::web_sys::console::log_1(&format!($($t)*).into()))
+}
+
+pub fn worker_scope() -> web_sys::DedicatedWorkerGlobalScope {
+    js_sys::global()
+        .dyn_into::<web_sys::DedicatedWorkerGlobalScope>()
+        .unwrap()
 }

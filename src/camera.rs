@@ -1,5 +1,3 @@
-use js_sys::Math;
-
 use crate::{
     components::{
         material::Material,
@@ -153,8 +151,8 @@ impl Camera {
         let mut pixel_count = vec![0; self.render.image_width * self.computed.image_height];
 
         loop {
-            let i = Math::floor(Math::random() * self.render.image_width as f64) as usize;
-            let j = Math::floor(Math::random() * self.computed.image_height as f64) as usize;
+            let i = interval(0.0, self.render.image_width as f64).random_integer();
+            let j = interval(0.0, self.computed.image_height as f64).random_integer();
 
             let index = j * self.render.image_width + i;
             pixel_count[index] += 1;

@@ -1,4 +1,4 @@
-use js_sys::Math;
+use rand::{RngExt, rng};
 
 pub const fn interval(min: f64, max: f64) -> Interval {
     Interval::new(min, max)
@@ -65,11 +65,11 @@ impl Interval {
     }
 
     pub fn random_double(&self) -> f64 {
-        Math::random() * self.size() + self.min
+        rng().random_range(self.min..=self.max)
     }
 
     pub fn random_integer(&self) -> usize {
-        interval(self.min, self.max).random_double().floor() as usize
+        rng().random_range((self.min as usize)..(self.max as usize))
     }
 }
 
