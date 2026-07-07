@@ -9,7 +9,7 @@ use crate::{
     components::{
         material::MaterialEnum,
         surface::{
-            primitive::Sphere,
+            primitive::{Quad, Sphere},
             structure::{BoundingVolumeHierarchy, SurfaceList},
         },
     },
@@ -25,6 +25,7 @@ use crate::{
 pub enum SurfaceEnum {
     Shared,
     Sphere,
+    Quad,
     SurfaceList,
     BoundingVolumeHierarchy,
 }

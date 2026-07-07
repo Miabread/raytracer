@@ -17,7 +17,12 @@ pub struct BoundingBox {
 
 impl BoundingBox {
     pub fn new(x: Interval, y: Interval, z: Interval) -> Self {
-        Self { x, y, z }
+        let delta = 0.0001;
+        Self {
+            x: if x.size() > delta { x } else { x.expand(delta) },
+            y: if y.size() > delta { y } else { y.expand(delta) },
+            z: if z.size() > delta { z } else { z.expand(delta) },
+        }
     }
 
     pub fn corners(a: Point, b: Point) -> Self {

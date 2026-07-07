@@ -6,17 +6,18 @@ use crate::{
         material::{Dielectric, Lambert, Material, MaterialEnum, Metal},
         noise::Perlin,
         surface::{
-            primitive::Sphere,
+            primitive::{Quad, Sphere},
             structure::{BoundingVolumeHierarchy, SurfaceList},
         },
         texture::{Checker, NoiseTexture},
     },
     util::{
         interval::Interval,
-        vec3::{Color, color, point},
+        vec3::{Color, arrow, color, point},
     },
 };
 
+#[derive(Debug, Clone)]
 pub struct Scene {
     pub world: BoundingVolumeHierarchy,
     pub camera: CameraSceneOptions,
@@ -215,6 +216,51 @@ pub fn perlin_spheres() -> Scene {
         camera: CameraSceneOptions {
             vertical_fov: 20.0,
             look_from: point(13.0, 2.0, 3.0),
+            look_at: point(0.0, 0.0, 0.0),
+            ..Default::default()
+        },
+    }
+}
+
+pub fn quads() -> Scene {
+    let mut world = SurfaceList::new();
+
+    world.add(Quad::new(
+        point(-3.0, -2.0, 5.0),
+        arrow(0.0, 0.0, -4.0),
+        arrow(0.0, 4.0, 0.0),
+        Lambert::new(color(1.0, 0.2, 0.2)),
+    ));
+    world.add(Quad::new(
+        point(-2.0, -2.0, 0.0),
+        arrow(4.0, 0.0, 0.0),
+        arrow(0.0, 4.0, 0.0),
+        Lambert::new(color(0.2, 1.0, 0.2)),
+    ));
+    world.add(Quad::new(
+        point(3.0, -2.0, 1.0),
+        arrow(0.0, 0.0, 4.0),
+        arrow(0.0, 4.0, 0.0),
+        Lambert::new(color(0.2, 0.2, 1.0)),
+    ));
+    world.add(Quad::new(
+        point(-2.0, 3.0, 1.0),
+        arrow(4.0, 0.0, 0.0),
+        arrow(0.0, 0.0, 4.0),
+        Lambert::new(color(1.0, 0.5, 0.0)),
+    ));
+    world.add(Quad::new(
+        point(-2.0, -3.0, 5.0),
+        arrow(4.0, 0.0, 0.0),
+        arrow(0.0, 0.0, -4.0),
+        Lambert::new(color(0.2, 0.8, 0.8)),
+    ));
+
+    Scene {
+        world: world.into(),
+        camera: CameraSceneOptions {
+            vertical_fov: 80.0,
+            look_from: point(0.0, 0.0, 9.0),
             look_at: point(0.0, 0.0, 0.0),
             ..Default::default()
         },

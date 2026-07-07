@@ -8,7 +8,7 @@ use crate::{
     util::{
         bounding_box::BoundingBox,
         interval::Interval,
-        vec3::{Point, arrow, point},
+        vec3::{Arrow, Point, arrow, point},
     },
 };
 
@@ -101,6 +101,81 @@ impl Surface for Sphere {
             &self.material,
             u,
             v,
+        ))
+    }
+
+    fn bounding_box(&self) -> BoundingBox {
+        self.bounding_box
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Quad {
+    center: Point,
+    u: Arrow,
+    v: Arrow,
+    material: MaterialEnum,
+
+    bounding_box: BoundingBox,
+    normal: Arrow,
+    dot: f64,
+    w: Arrow,
+}
+
+impl Quad {
+    pub fn new(center: Point, u: Arrow, v: Arrow, material: impl Into<MaterialEnum>) -> Self {
+        let bounding_box = BoundingBox::corners(center, center + u + v)
+            .join(BoundingBox::corners(center + u, center + v));
+
+        let n = u.cross(v);
+        let normal = n.unit_vector();
+        let dot = normal.dot(center);
+        let w = n / n.dot(n);
+
+        Self {
+            center,
+            u,
+            v,
+            material: material.into(),
+
+            bounding_box,
+            normal,
+            dot,
+            w,
+        }
+    }
+}
+
+impl Surface for Quad {
+    fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitResult<'_>> {
+        let denominator = self.normal.dot(ray.direction);
+
+        if denominator.abs() < 1e-8 {
+            return None;
+        }
+
+        let t = (self.dot - self.normal.dot(ray.origin)) / denominator;
+        if !ray_t.contains(t) {
+            return None;
+        }
+
+        let point = ray.at(t);
+        let planar_hit = point - self.center;
+        let alpha = self.w.dot(planar_hit.cross(self.v));
+        let beta = self.w.dot(self.u.cross(planar_hit));
+
+        if !Interval::UNIT.contains(alpha) || !Interval::UNIT.contains(beta) {
+            return None;
+        }
+
+        Some(HitResult::new(
+            t,
+            point,
+            ray,
+            self.normal,
+            &self.material,
+            alpha,
+            beta,
         ))
     }
 
