@@ -18,7 +18,7 @@ pub enum TextureEnum {
 
 #[enum_dispatch(TextureEnum)]
 pub trait Texture: Into<TextureEnum> {
-    fn value(&self, u: f64, v: f64, p: Point) -> Color;
+    fn value(&self, u: f64, v: f64, point: Point) -> Color;
 
     fn shared(self) -> Shared
     where

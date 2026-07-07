@@ -9,7 +9,7 @@ use crate::{
     },
     util::{
         interval::Interval,
-        vec3::{Arrow, Color, color},
+        vec3::{Arrow, Color, Point, color},
     },
 };
 
@@ -26,11 +26,18 @@ pub enum MaterialEnum {
     Lambert,
     Metal,
     Dielectric,
+    DiffuseLight,
 }
 
 #[enum_dispatch(MaterialEnum)]
 pub trait Material: Into<MaterialEnum> {
-    fn scatter(&self, ray: Ray, hit: HitResult) -> Option<MaterialResult>;
+    fn scatter(&self, _ray: Ray, _hit: HitResult) -> Option<MaterialResult> {
+        None
+    }
+
+    fn emitted(&self, _u: f64, _v: f64, _point: Point) -> Color {
+        color(0.0, 0.0, 0.0)
+    }
 
     fn shared(self) -> Shared
     where
@@ -152,5 +159,24 @@ impl Material for Dielectric {
             attenuation: color(1.0, 1.0, 1.0),
             scattered: Ray::new(hit.point, direction, ray.time),
         })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct DiffuseLight {
+    texture: TextureEnum,
+}
+
+impl DiffuseLight {
+    pub fn new(texture: impl Into<TextureEnum>) -> Self {
+        Self {
+            texture: texture.into(),
+        }
+    }
+}
+
+impl Material for DiffuseLight {
+    fn emitted(&self, u: f64, v: f64, point: Point) -> Color {
+        self.texture.value(u, v, point)
     }
 }

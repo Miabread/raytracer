@@ -29,6 +29,12 @@ impl Default for CameraRenderOptions {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub enum Background {
+    Sky,
+    Solid(Color),
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct CameraSceneOptions {
     pub vertical_fov: f64,
     pub look_from: Point,
@@ -36,9 +42,9 @@ pub struct CameraSceneOptions {
     pub v_up: Arrow,
     pub defocus_angle: f64,
     pub focus_distance: f64,
+    pub background: Background,
 }
 
-#[allow(clippy::derivable_impls)]
 impl Default for CameraSceneOptions {
     fn default() -> Self {
         Self {
@@ -48,6 +54,7 @@ impl Default for CameraSceneOptions {
             v_up: arrow(0.0, 1.0, 0.0),
             defocus_angle: 0.0,
             focus_distance: 10.0,
+            background: Background::Sky,
         }
     }
 }
@@ -175,7 +182,7 @@ impl Camera {
         let pixel_color = self.pixel_color[index];
 
         let ray = self.get_ray(i as f64, j as f64);
-        let color = Self::get_color(ray, self.render.max_depth, world);
+        let color = self.get_color(ray, self.render.max_depth, world);
 
         let pixel_color = pixel_color + color;
         self.pixel_color[index] = pixel_color;
@@ -183,22 +190,32 @@ impl Camera {
         write_pixel([i, j], self.convert_color(pixel_color / n as f64));
     }
 
-    fn get_color(ray: Ray, depth: usize, world: &impl Surface) -> Color {
+    fn get_color(&self, ray: Ray, depth: usize, world: &impl Surface) -> Color {
         if depth == 0 {
             return color(0.0, 0.0, 0.0);
         }
 
         let Some(hit) = world.hit(ray, interval(0.001, f64::INFINITY)) else {
-            let unit_direction = ray.direction.unit_vector();
-            let a = 0.5 * (unit_direction.y() + 1.0);
-            return color(1.0, 1.0, 1.0) * (1.0 - a) + color(0.5, 0.7, 1.0) * a;
+            return match self.scene.background {
+                Background::Solid(color) => color,
+                Background::Sky => {
+                    let unit_direction = ray.direction.unit_vector();
+                    let a = 0.5 * (unit_direction.y() + 1.0);
+                    color(1.0, 1.0, 1.0) * (1.0 - a) + color(0.5, 0.7, 1.0) * a
+                }
+            };
         };
 
-        let Some(mat_hit) = hit.material.clone().scatter(ray, hit) else {
-            return color(0.0, 0.0, 0.0);
+        let emission_color = hit.material.emitted(hit.u, hit.v, hit.point);
+
+        let Some(mat_hit) = hit.material.scatter(ray, hit) else {
+            return emission_color;
         };
 
-        mat_hit.attenuation * Self::get_color(mat_hit.scattered, depth - 1, world)
+        let scatter_color =
+            mat_hit.attenuation * self.get_color(mat_hit.scattered, depth - 1, world);
+
+        emission_color + scatter_color
     }
 
     fn get_ray(&self, i: f64, j: f64) -> Ray {
