@@ -32,7 +32,7 @@ pub enum SurfaceEnum {
 
 #[enum_dispatch(SurfaceEnum)]
 pub trait Surface: Into<SurfaceEnum> {
-    fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitResult<'_>>;
+    fn hit(&self, ray: Ray, ray_t: Interval) -> Option<SurfaceHit<'_>>;
 
     fn bounding_box(&self) -> BoundingBox;
 
@@ -52,7 +52,7 @@ pub struct Shared {
 }
 
 impl Surface for Shared {
-    fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitResult<'_>> {
+    fn hit(&self, ray: Ray, ray_t: Interval) -> Option<SurfaceHit<'_>> {
         self.inner.hit(ray, ray_t)
     }
 
@@ -83,7 +83,7 @@ impl Ray {
 }
 
 #[derive(Clone)]
-pub struct HitResult<'a> {
+pub struct SurfaceHit<'a> {
     pub t: f64,
     pub point: Point,
     pub normal: Arrow,
@@ -93,7 +93,7 @@ pub struct HitResult<'a> {
     pub v: f64,
 }
 
-impl<'a> HitResult<'a> {
+impl<'a> SurfaceHit<'a> {
     fn new(
         t: f64,
         point: Point,

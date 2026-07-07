@@ -206,7 +206,7 @@ impl Camera {
             };
         };
 
-        let emission_color = hit.material.emitted(hit.u, hit.v, hit.point);
+        let emission_color = hit.material.emitted(&hit);
 
         let Some(mat_hit) = hit.material.scatter(ray, hit) else {
             return emission_color;

@@ -4,17 +4,17 @@ use enum_dispatch::enum_dispatch;
 
 use crate::{
     components::{
-        surface::{HitResult, Ray},
+        surface::{Ray, SurfaceHit},
         texture::{Texture, TextureEnum},
     },
     util::{
         interval::Interval,
-        vec3::{Arrow, Color, Point, color},
+        vec3::{Arrow, Color, color},
     },
 };
 
 #[derive(Debug, Clone, Copy)]
-pub struct MaterialResult {
+pub struct MaterialHit {
     pub attenuation: Color,
     pub scattered: Ray,
 }
@@ -31,11 +31,11 @@ pub enum MaterialEnum {
 
 #[enum_dispatch(MaterialEnum)]
 pub trait Material: Into<MaterialEnum> {
-    fn scatter(&self, _ray: Ray, _hit: HitResult) -> Option<MaterialResult> {
+    fn scatter(&self, _ray: Ray, _hit: SurfaceHit) -> Option<MaterialHit> {
         None
     }
 
-    fn emitted(&self, _u: f64, _v: f64, _point: Point) -> Color {
+    fn emitted(&self, _hit: &SurfaceHit<'_>) -> Color {
         color(0.0, 0.0, 0.0)
     }
 
@@ -55,7 +55,7 @@ pub struct Shared {
 }
 
 impl Material for Shared {
-    fn scatter(&self, ray: Ray, hit: HitResult) -> Option<MaterialResult> {
+    fn scatter(&self, ray: Ray, hit: SurfaceHit) -> Option<MaterialHit> {
         self.inner.scatter(ray, hit)
     }
 }
@@ -74,15 +74,15 @@ impl Lambert {
 }
 
 impl Material for Lambert {
-    fn scatter(&self, ray: Ray, hit: HitResult) -> Option<MaterialResult> {
+    fn scatter(&self, ray: Ray, hit: SurfaceHit) -> Option<MaterialHit> {
         let mut direction = hit.normal + Arrow::random_unit_vector();
 
         if direction.near_zero() {
             direction = hit.normal;
         }
 
-        Some(MaterialResult {
-            attenuation: self.texture.value(hit.u, hit.v, hit.point),
+        Some(MaterialHit {
+            attenuation: self.texture.value(&hit),
             scattered: Ray::new(hit.point, direction, ray.time),
         })
     }
@@ -101,12 +101,12 @@ impl Metal {
 }
 
 impl Material for Metal {
-    fn scatter(&self, ray: Ray, hit: HitResult) -> Option<MaterialResult> {
+    fn scatter(&self, ray: Ray, hit: SurfaceHit) -> Option<MaterialHit> {
         let reflected = ray.direction.reflect(hit.normal).unit_vector()
             + (self.fuzz * Arrow::random_unit_vector());
         let scattered = Ray::new(hit.point, reflected, ray.time);
 
-        (scattered.direction.dot(hit.normal) > 0.0).then_some(MaterialResult {
+        (scattered.direction.dot(hit.normal) > 0.0).then_some(MaterialHit {
             attenuation: self.albedo,
             scattered,
         })
@@ -133,7 +133,7 @@ impl Dielectric {
 }
 
 impl Material for Dielectric {
-    fn scatter(&self, ray: Ray, hit: HitResult) -> Option<MaterialResult> {
+    fn scatter(&self, ray: Ray, hit: SurfaceHit) -> Option<MaterialHit> {
         let refraction_index = if hit.front_face {
             1.0 / self.refraction_index
         } else {
@@ -155,7 +155,7 @@ impl Material for Dielectric {
             unit_direction.refract(hit.normal, refraction_index)
         };
 
-        Some(MaterialResult {
+        Some(MaterialHit {
             attenuation: color(1.0, 1.0, 1.0),
             scattered: Ray::new(hit.point, direction, ray.time),
         })
@@ -176,7 +176,7 @@ impl DiffuseLight {
 }
 
 impl Material for DiffuseLight {
-    fn emitted(&self, u: f64, v: f64, point: Point) -> Color {
-        self.texture.value(u, v, point)
+    fn emitted(&self, hit: &SurfaceHit<'_>) -> Color {
+        self.texture.value(hit)
     }
 }

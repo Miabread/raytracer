@@ -3,8 +3,11 @@ use std::rc::Rc;
 use enum_dispatch::enum_dispatch;
 
 use crate::{
-    components::noise::{Noise, NoiseEnum},
-    util::vec3::{Color, Point, color},
+    components::{
+        noise::{Noise, NoiseEnum},
+        surface::SurfaceHit,
+    },
+    util::vec3::{Color, color},
 };
 
 #[enum_dispatch]
@@ -18,7 +21,7 @@ pub enum TextureEnum {
 
 #[enum_dispatch(TextureEnum)]
 pub trait Texture: Into<TextureEnum> {
-    fn value(&self, u: f64, v: f64, point: Point) -> Color;
+    fn value(&self, hit: &SurfaceHit<'_>) -> Color;
 
     fn shared(self) -> Shared
     where
@@ -36,8 +39,8 @@ pub struct Shared {
 }
 
 impl Texture for Shared {
-    fn value(&self, u: f64, v: f64, point: Point) -> Color {
-        self.inner.value(u, v, point)
+    fn value(&self, hit: &SurfaceHit<'_>) -> Color {
+        self.inner.value(hit)
     }
 }
 
@@ -53,7 +56,7 @@ impl SolidColor {
 }
 
 impl Texture for SolidColor {
-    fn value(&self, _u: f64, _v: f64, _point: Point) -> Color {
+    fn value(&self, _hit: &SurfaceHit<'_>) -> Color {
         self.albedo
     }
 }
@@ -82,14 +85,14 @@ impl Checker {
 }
 
 impl Texture for Checker {
-    fn value(&self, u: f64, v: f64, point: Point) -> Color {
-        let p = (self.inverse_scale * point).floor();
+    fn value(&self, hit: &SurfaceHit<'_>) -> Color {
+        let p = (self.inverse_scale * hit.point).floor();
         let is_even = (p.x() as i32 + p.y() as i32 + p.z() as i32) % 2 == 0;
 
         if is_even {
-            self.even.value(u, v, point)
+            self.even.value(hit)
         } else {
-            self.odd.value(u, v, point)
+            self.odd.value(hit)
         }
     }
 }
@@ -108,7 +111,7 @@ impl NoiseTexture {
 }
 
 impl Texture for NoiseTexture {
-    fn value(&self, _u: f64, _v: f64, point: Point) -> Color {
-        color(1.0, 1.0, 1.0) * self.noise.noise(point)
+    fn value(&self, hit: &SurfaceHit<'_>) -> Color {
+        color(1.0, 1.0, 1.0) * self.noise.noise(hit.point)
     }
 }

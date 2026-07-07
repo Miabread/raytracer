@@ -1,5 +1,5 @@
 use crate::{
-    components::surface::{HitResult, Ray, Surface, SurfaceEnum},
+    components::surface::{SurfaceHit, Ray, Surface, SurfaceEnum},
     util::{
         bounding_box::BoundingBox,
         interval::{Interval, interval},
@@ -25,7 +25,7 @@ impl SurfaceList {
 }
 
 impl Surface for SurfaceList {
-    fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitResult<'_>> {
+    fn hit(&self, ray: Ray, ray_t: Interval) -> Option<SurfaceHit<'_>> {
         let mut best_hit = None;
         let mut closest_so_far = ray_t.max;
 
@@ -90,7 +90,7 @@ impl BoundingVolumeHierarchy {
 }
 
 impl Surface for BoundingVolumeHierarchy {
-    fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitResult<'_>> {
+    fn hit(&self, ray: Ray, ray_t: Interval) -> Option<SurfaceHit<'_>> {
         if !self.bounding_box.hit(ray, ray_t) {
             return None;
         }

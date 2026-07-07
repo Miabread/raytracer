@@ -3,7 +3,7 @@ use std::f64::consts::PI;
 use crate::{
     components::{
         material::MaterialEnum,
-        surface::{HitResult, Ray, Surface},
+        surface::{Ray, Surface, SurfaceHit},
     },
     util::{
         bounding_box::BoundingBox,
@@ -63,7 +63,7 @@ impl Sphere {
 }
 
 impl Surface for Sphere {
-    fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitResult<'_>> {
+    fn hit(&self, ray: Ray, ray_t: Interval) -> Option<SurfaceHit<'_>> {
         let current_center = self.center.at(ray.time);
         let oc = current_center - ray.origin;
         let a = ray.direction.length_squared();
@@ -93,7 +93,7 @@ impl Surface for Sphere {
         let u = phi / (2.0 * PI);
         let v = theta / PI;
 
-        Some(HitResult::new(
+        Some(SurfaceHit::new(
             t,
             point,
             ray,
@@ -147,7 +147,7 @@ impl Quad {
 }
 
 impl Surface for Quad {
-    fn hit(&self, ray: Ray, ray_t: Interval) -> Option<HitResult<'_>> {
+    fn hit(&self, ray: Ray, ray_t: Interval) -> Option<SurfaceHit<'_>> {
         let denominator = self.normal.dot(ray.direction);
 
         if denominator.abs() < 1e-8 {
@@ -168,7 +168,7 @@ impl Surface for Quad {
             return None;
         }
 
-        Some(HitResult::new(
+        Some(SurfaceHit::new(
             t,
             point,
             ray,
