@@ -203,7 +203,7 @@ pub fn checkered_spheres() -> Scene {
 pub fn perlin_spheres() -> Scene {
     let mut world = SurfaceList::new();
 
-    let material = Lambert::new(NoiseTexture::new(Perlin::new())).shared();
+    let material = Lambert::new(NoiseTexture::new(Perlin::new(), 4.0)).shared();
     world.add(Sphere::stationary(
         point(0.0, -1000.0, 0.0),
         1000.0,

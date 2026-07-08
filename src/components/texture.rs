@@ -100,18 +100,20 @@ impl Texture for Checker {
 #[derive(Debug, Clone)]
 pub struct NoiseTexture {
     noise: NoiseEnum,
+    scale: f64,
 }
 
 impl NoiseTexture {
-    pub fn new(noise: impl Into<NoiseEnum>) -> Self {
+    pub fn new(noise: impl Into<NoiseEnum>, scale: f64) -> Self {
         Self {
             noise: noise.into(),
+            scale,
         }
     }
 }
 
 impl Texture for NoiseTexture {
     fn value(&self, hit: &SurfaceHit<'_>) -> Color {
-        color(1.0, 1.0, 1.0) * self.noise.noise(hit.point)
+        color(1.0, 1.0, 1.0) * 0.5 * (1.0 + self.noise.noise(self.scale * hit.point))
     }
 }
