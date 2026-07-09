@@ -1,3 +1,5 @@
+use std::ops::Add;
+
 use rand::{RngExt, rng};
 
 pub const fn interval(min: f64, max: f64) -> Interval {
@@ -76,5 +78,21 @@ impl Interval {
 impl Default for Interval {
     fn default() -> Self {
         Self::EMPTY
+    }
+}
+
+impl Add<f64> for Interval {
+    type Output = Interval;
+
+    fn add(self, rhs: f64) -> Self::Output {
+        Interval::new(self.min + rhs, self.max + rhs)
+    }
+}
+
+impl Add<Interval> for f64 {
+    type Output = Interval;
+
+    fn add(self, rhs: Interval) -> Self::Output {
+        rhs + self
     }
 }

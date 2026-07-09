@@ -6,6 +6,7 @@ use crate::{
         material::{Dielectric, DiffuseLight, Lambert, Material, MaterialEnum, Metal},
         noise::Perlin,
         surface::{
+            Surface,
             primitive::{Quad, Sphere},
             structure::{BoundingVolumeHierarchy, SurfaceList},
         },
@@ -352,16 +353,24 @@ pub fn cornell_box() -> Scene {
         material_white.clone(),
     ));
 
-    world.add(Quad::cube(
-        point(130.0, 0.0, 65.0),
-        point(295.0, 165.0, 230.0),
-        material_white.clone(),
-    ));
-    world.add(Quad::cube(
-        point(265.0, 0.0, 295.0),
-        point(430.0, 330.0, 460.0),
-        material_white,
-    ));
+    world.add(
+        Quad::cube(
+            point(0.0, 0.0, 0.0),
+            point(165.0, 330.0, 165.0),
+            material_white.clone(),
+        )
+        .rotate_y(15.0)
+        .translate(arrow(265.0, 0.0, 295.0)),
+    );
+    world.add(
+        Quad::cube(
+            point(0.0, 0.0, 0.0),
+            point(165.0, 165.0, 165.0),
+            material_white,
+        )
+        .rotate_y(-18.0)
+        .translate(arrow(130.0, 0.0, 65.0)),
+    );
 
     Scene {
         world: world.into(),

@@ -1,10 +1,13 @@
-use std::{mem::swap, ops::Index};
+use std::{
+    mem::swap,
+    ops::{Add, Index},
+};
 
 use crate::{
     components::surface::Ray,
     util::{
         interval::{Interval, interval},
-        vec3::Point,
+        vec3::{Arrow, Point},
     },
 };
 
@@ -89,5 +92,21 @@ impl Index<usize> for BoundingBox {
             2 => &self.z,
             _ => panic!("invalid bounding box index"),
         }
+    }
+}
+
+impl Add<Arrow> for BoundingBox {
+    type Output = BoundingBox;
+
+    fn add(self, rhs: Arrow) -> Self::Output {
+        BoundingBox::new(self.x + rhs.x(), self.y + rhs.y(), self.z + rhs.z())
+    }
+}
+
+impl Add<BoundingBox> for Arrow {
+    type Output = BoundingBox;
+
+    fn add(self, rhs: BoundingBox) -> Self::Output {
+        rhs + self
     }
 }

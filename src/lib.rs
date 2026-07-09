@@ -17,10 +17,10 @@ pub fn draw(aspect_ratio: f64) {
 
     let mut camera = Camera::new(
         CameraRenderOptions {
-            image_width: 1000,
+            image_width: 600,
             aspect_ratio,
-            samples_per_pixel: 100,
-            max_depth: 10,
+            samples_per_pixel: 200,
+            max_depth: 50,
         },
         scene.camera,
     );

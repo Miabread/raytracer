@@ -1,3 +1,4 @@
+pub mod instance;
 pub mod primitive;
 pub mod structure;
 
@@ -9,6 +10,7 @@ use crate::{
     components::{
         material::MaterialEnum,
         surface::{
+            instance::{RotateY, Translate},
             primitive::{Quad, Sphere},
             structure::{BoundingVolumeHierarchy, SurfaceList},
         },
@@ -28,6 +30,8 @@ pub enum SurfaceEnum {
     Quad,
     SurfaceList,
     BoundingVolumeHierarchy,
+    Translate,
+    RotateY,
 }
 
 #[enum_dispatch(SurfaceEnum)]
@@ -43,6 +47,14 @@ pub trait Surface: Into<SurfaceEnum> {
         Shared {
             inner: Rc::new(self.into()),
         }
+    }
+
+    fn rotate_y(self, angle: f64) -> RotateY {
+        RotateY::new(self, angle)
+    }
+
+    fn translate(self, offset: Arrow) -> Translate {
+        Translate::new(self, offset)
     }
 }
 
