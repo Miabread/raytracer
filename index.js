@@ -13,6 +13,8 @@ let imageData = null;
 /** @type {Uint32Array} */
 let buffer = null;
 
+let lastLine = 0;
+
 const handlePixelBatch = (/** @type {MessageEvent<ArrayBuffer>} */ e) => {
     const array = new Uint32Array(e.data);
 
@@ -23,6 +25,8 @@ const handlePixelBatch = (/** @type {MessageEvent<ArrayBuffer>} */ e) => {
 
         buffer[j * canvas.width + i] = color;
     }
+
+    lastLine = array[array.length - 2];
 
     e.data.transfer(0);
 };
@@ -43,6 +47,8 @@ worker.onmessage = (/** @type {MessageEvent<ArrayBuffer>} */ e) => {
 const render = () => {
     if (imageData) {
         ctx.putImageData(imageData, 0, 0);
+        ctx.fillStyle = 'blue';
+        ctx.fillRect(0, lastLine, canvas.width, canvas.height / 200);
     }
     requestAnimationFrame(render);
 };
