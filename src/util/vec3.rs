@@ -117,6 +117,12 @@ impl<T: Copy> Vec3<T> {
     pub fn floor(self) -> Self {
         Self::new(self.0.floor(), self.1.floor(), self.2.floor())
     }
+    pub fn min<U: Copy>(self, rhs: Vec3<U>) -> Self {
+        Self::new(self.0.min(rhs.0), self.1.min(rhs.1), self.2.min(rhs.2))
+    }
+    pub fn max<U: Copy>(self, rhs: Vec3<U>) -> Self {
+        Self::new(self.0.max(rhs.0), self.1.max(rhs.1), self.2.max(rhs.2))
+    }
 }
 
 impl<T> Index<usize> for Vec3<T> {

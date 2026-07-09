@@ -2,8 +2,8 @@ use std::f64::consts::PI;
 
 use crate::{
     components::{
-        material::MaterialEnum,
-        surface::{Ray, Surface, SurfaceHit},
+        material::{Material, MaterialEnum},
+        surface::{Ray, Surface, SurfaceHit, structure::SurfaceList},
     },
     util::{
         bounding_box::BoundingBox,
@@ -143,6 +143,57 @@ impl Quad {
             dot,
             w,
         }
+    }
+
+    pub fn cube(point_a: Point, point_b: Point, material: impl Into<MaterialEnum>) -> SurfaceList {
+        let mut sides = SurfaceList::new();
+        let material = material.into().shared();
+
+        let min = point_a.min(point_b);
+        let max = point_a.max(point_b);
+
+        let dx = arrow(max.x() - min.x(), 0.0, 0.0);
+        let dy = arrow(0.0, max.y() - min.y(), 0.0);
+        let dz = arrow(0.0, 0.0, max.z() - min.z());
+
+        sides.add(Quad::new(
+            point(min.x(), min.y(), max.z()),
+            dx,
+            dy,
+            material.clone(),
+        ));
+        sides.add(Quad::new(
+            point(max.x(), min.y(), max.z()),
+            -dz,
+            dy,
+            material.clone(),
+        ));
+        sides.add(Quad::new(
+            point(max.x(), min.y(), min.z()),
+            -dx,
+            dy,
+            material.clone(),
+        ));
+        sides.add(Quad::new(
+            point(min.x(), min.y(), min.z()),
+            dz,
+            dy,
+            material.clone(),
+        ));
+        sides.add(Quad::new(
+            point(min.x(), max.y(), max.z()),
+            dx,
+            -dz,
+            material.clone(),
+        ));
+        sides.add(Quad::new(
+            point(min.x(), min.y(), min.z()),
+            dx,
+            dz,
+            material,
+        ));
+
+        sides
     }
 }
 

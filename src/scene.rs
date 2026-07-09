@@ -1,15 +1,15 @@
 use std::f64::consts::PI;
 
 use crate::{
-    camera::CameraSceneOptions,
+    camera::{Background, CameraSceneOptions},
     components::{
-        material::{Dielectric, Lambert, Material, MaterialEnum, Metal},
+        material::{Dielectric, DiffuseLight, Lambert, Material, MaterialEnum, Metal},
         noise::Perlin,
         surface::{
             primitive::{Quad, Sphere},
             structure::{BoundingVolumeHierarchy, SurfaceList},
         },
-        texture::{Checker, NoiseTexture},
+        texture::{Checker, NoiseTexture, Texture},
     },
     util::{
         interval::Interval,
@@ -262,6 +262,114 @@ pub fn quads() -> Scene {
             vertical_fov: 80.0,
             look_from: point(0.0, 0.0, 9.0),
             look_at: point(0.0, 0.0, 0.0),
+            ..Default::default()
+        },
+    }
+}
+
+pub fn simple_light() -> Scene {
+    let mut world = SurfaceList::new();
+
+    let material_perlin = Lambert::new(NoiseTexture::new(Perlin::new(), 4.0).shared());
+    world.add(Sphere::stationary(
+        point(0.0, -1000.0, 0.0),
+        1000.0,
+        material_perlin.clone(),
+    ));
+    world.add(Sphere::stationary(
+        point(0.0, 2.0, 0.0),
+        2.0,
+        material_perlin,
+    ));
+
+    let material_light = DiffuseLight::new(color(4.0, 4.0, 4.0)).shared();
+    world.add(Sphere::stationary(
+        point(0.0, 7.0, 0.0),
+        2.0,
+        material_light.clone(),
+    ));
+    world.add(Quad::new(
+        point(3.0, 1.0, -2.0),
+        arrow(2.0, 0.0, 0.0),
+        arrow(0.0, 2.0, 0.0),
+        material_light,
+    ));
+
+    Scene {
+        world: world.into(),
+        camera: CameraSceneOptions {
+            vertical_fov: 20.0,
+            look_from: point(26.0, 3.0, 6.0),
+            look_at: point(0.0, 2.0, 0.0),
+            background: Background::Solid(color(0.0, 0.0, 0.0)),
+            ..Default::default()
+        },
+    }
+}
+
+pub fn cornell_box() -> Scene {
+    let mut world = SurfaceList::new();
+
+    let material_red = Lambert::new(color(0.65, 0.05, 0.05));
+    let material_white = Lambert::new(color(0.73, 0.73, 0.73)).shared();
+    let material_green = Lambert::new(color(0.12, 0.45, 0.15));
+    let material_light = DiffuseLight::new(color(15.0, 15.0, 15.0));
+
+    world.add(Quad::new(
+        point(555.0, 0.0, 0.0),
+        arrow(0.0, 555.0, 0.0),
+        arrow(0.0, 0.0, 555.0),
+        material_green,
+    ));
+    world.add(Quad::new(
+        point(0.0, 0.0, 0.0),
+        arrow(0.0, 555.0, 0.0),
+        arrow(0.0, 0.0, 555.0),
+        material_red,
+    ));
+    world.add(Quad::new(
+        point(343.0, 554.0, 332.0),
+        arrow(-130.0, 0.0, 0.0),
+        arrow(0.0, 0.0, -105.0),
+        material_light,
+    ));
+    world.add(Quad::new(
+        point(0.0, 0.0, 0.0),
+        arrow(555.0, 0.0, 0.0),
+        arrow(0.0, 0.0, 555.0),
+        material_white.clone(),
+    ));
+    world.add(Quad::new(
+        point(555.0, 555.0, 555.0),
+        arrow(-555.0, 0.0, 0.0),
+        arrow(0.0, 0.0, -555.0),
+        material_white.clone(),
+    ));
+    world.add(Quad::new(
+        point(0.0, 0.0, 555.0),
+        arrow(555.0, 0.0, 0.0),
+        arrow(0.0, 555.0, 0.0),
+        material_white.clone(),
+    ));
+
+    world.add(Quad::cube(
+        point(130.0, 0.0, 65.0),
+        point(295.0, 165.0, 230.0),
+        material_white.clone(),
+    ));
+    world.add(Quad::cube(
+        point(265.0, 0.0, 295.0),
+        point(430.0, 330.0, 460.0),
+        material_white,
+    ));
+
+    Scene {
+        world: world.into(),
+        camera: CameraSceneOptions {
+            vertical_fov: 40.0,
+            look_from: point(278.0, 278.0, -800.0),
+            look_at: point(278.0, 278.0, 0.0),
+            background: Background::Solid(color(0.0, 0.0, 0.0)),
             ..Default::default()
         },
     }

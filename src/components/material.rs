@@ -58,6 +58,17 @@ impl Material for Shared {
     fn scatter(&self, ray: Ray, hit: SurfaceHit) -> Option<MaterialHit> {
         self.inner.scatter(ray, hit)
     }
+
+    fn emitted(&self, hit: &SurfaceHit<'_>) -> Color {
+        self.inner.emitted(hit)
+    }
+
+    fn shared(self) -> Shared
+    where
+        Self: std::marker::Sized,
+    {
+        self
+    }
 }
 
 #[derive(Debug, Clone)]
