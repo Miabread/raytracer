@@ -3,12 +3,13 @@ use std::f64::consts::PI;
 use crate::{
     camera::{Background, CameraSceneOptions},
     components::{
-        material::{Dielectric, DiffuseLight, Lambert, Material, MaterialEnum, Metal},
+        material::{Dielectric, DiffuseLight, Isotropic, Lambert, Material, MaterialEnum, Metal},
         noise::Perlin,
         surface::{
             Surface,
             primitive::{Quad, Sphere},
             structure::{BoundingVolumeHierarchy, SurfaceList},
+            volume::ConstantMedium,
         },
         texture::{Checker, NoiseTexture, Texture},
     },
@@ -371,6 +372,85 @@ pub fn cornell_box() -> Scene {
         .rotate_y(-18.0)
         .translate(arrow(130.0, 0.0, 65.0)),
     );
+
+    Scene {
+        world: world.into(),
+        camera: CameraSceneOptions {
+            vertical_fov: 40.0,
+            look_from: point(278.0, 278.0, -800.0),
+            look_at: point(278.0, 278.0, 0.0),
+            background: Background::Solid(color(0.0, 0.0, 0.0)),
+            ..Default::default()
+        },
+    }
+}
+pub fn cornell_smoke() -> Scene {
+    let mut world = SurfaceList::new();
+
+    let material_red = Lambert::new(color(0.65, 0.05, 0.05));
+    let material_white = Lambert::new(color(0.73, 0.73, 0.73)).shared();
+    let material_green = Lambert::new(color(0.12, 0.45, 0.15));
+    let material_light = DiffuseLight::new(color(7.0, 7.0, 7.0));
+
+    world.add(Quad::new(
+        point(555.0, 0.0, 0.0),
+        arrow(0.0, 555.0, 0.0),
+        arrow(0.0, 0.0, 555.0),
+        material_green,
+    ));
+    world.add(Quad::new(
+        point(0.0, 0.0, 0.0),
+        arrow(0.0, 555.0, 0.0),
+        arrow(0.0, 0.0, 555.0),
+        material_red,
+    ));
+    world.add(Quad::new(
+        point(113.0, 554.0, 127.0),
+        arrow(330.0, 0.0, 0.0),
+        arrow(0.0, 0.0, 305.0),
+        material_light,
+    ));
+    world.add(Quad::new(
+        point(0.0, 0.0, 0.0),
+        arrow(555.0, 0.0, 0.0),
+        arrow(0.0, 0.0, 555.0),
+        material_white.clone(),
+    ));
+    world.add(Quad::new(
+        point(555.0, 555.0, 555.0),
+        arrow(-555.0, 0.0, 0.0),
+        arrow(0.0, 0.0, -555.0),
+        material_white.clone(),
+    ));
+    world.add(Quad::new(
+        point(0.0, 0.0, 555.0),
+        arrow(555.0, 0.0, 0.0),
+        arrow(0.0, 555.0, 0.0),
+        material_white.clone(),
+    ));
+
+    world.add(ConstantMedium::new(
+        Quad::cube(
+            point(0.0, 0.0, 0.0),
+            point(165.0, 330.0, 165.0),
+            material_white.clone(),
+        )
+        .rotate_y(15.0)
+        .translate(arrow(265.0, 0.0, 295.0)),
+        0.01,
+        Isotropic::new(color(0.0, 0.0, 0.0)),
+    ));
+    world.add(ConstantMedium::new(
+        Quad::cube(
+            point(0.0, 0.0, 0.0),
+            point(165.0, 165.0, 165.0),
+            material_white,
+        )
+        .rotate_y(-18.0)
+        .translate(arrow(130.0, 0.0, 65.0)),
+        0.01,
+        Isotropic::new(color(1.0, 1.0, 1.0)),
+    ));
 
     Scene {
         world: world.into(),

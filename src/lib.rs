@@ -13,12 +13,12 @@ pub fn draw(aspect_ratio: f64) {
     console_error_panic_hook::set_once();
 
     // Scene
-    let scene = scene::cornell_box();
+    let scene = scene::cornell_smoke();
 
     let mut camera = Camera::new(
         CameraRenderOptions {
             image_width: 600,
-            aspect_ratio,
+            aspect_ratio: 1.0,
             samples_per_pixel: 200,
             max_depth: 50,
         },

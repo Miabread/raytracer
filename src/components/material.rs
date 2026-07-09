@@ -27,6 +27,7 @@ pub enum MaterialEnum {
     Metal,
     Dielectric,
     DiffuseLight,
+    Isotropic,
 }
 
 #[enum_dispatch(MaterialEnum)]
@@ -189,5 +190,27 @@ impl DiffuseLight {
 impl Material for DiffuseLight {
     fn emitted(&self, hit: &SurfaceHit<'_>) -> Color {
         self.texture.value(hit)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Isotropic {
+    texture: TextureEnum,
+}
+
+impl Isotropic {
+    pub fn new(texture: impl Into<TextureEnum>) -> Self {
+        Self {
+            texture: texture.into(),
+        }
+    }
+}
+
+impl Material for Isotropic {
+    fn scatter(&self, ray: Ray, hit: SurfaceHit) -> Option<MaterialHit> {
+        Some(MaterialHit {
+            attenuation: self.texture.value(&hit),
+            scattered: Ray::new(hit.point, Arrow::random_unit_vector(), ray.time),
+        })
     }
 }

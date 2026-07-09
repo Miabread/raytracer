@@ -1,6 +1,7 @@
 pub mod instance;
 pub mod primitive;
 pub mod structure;
+pub mod volume;
 
 use std::rc::Rc;
 
@@ -13,6 +14,7 @@ use crate::{
             instance::{RotateY, Translate},
             primitive::{Quad, Sphere},
             structure::{BoundingVolumeHierarchy, SurfaceList},
+            volume::ConstantMedium,
         },
     },
     util::{
@@ -32,6 +34,7 @@ pub enum SurfaceEnum {
     BoundingVolumeHierarchy,
     Translate,
     RotateY,
+    ConstantMedium,
 }
 
 #[enum_dispatch(SurfaceEnum)]
