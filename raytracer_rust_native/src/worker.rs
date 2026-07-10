@@ -9,6 +9,7 @@ use rayon::prelude::*;
 use raytracer_rust_common::{
     camera::{Camera, CameraRenderOptions},
     scene::{BuiltinScene, Scene},
+    util::vec3::{Color, color},
 };
 
 #[derive(Debug)]
@@ -48,10 +49,14 @@ impl Worker {
                     let scene = config.scene.to_scene();
                     let camera = Camera::new(config.render, scene.camera);
 
+                    let image_width = camera.image_width();
+                    let image_height = camera.image_height();
+                    let pixel_sums = vec![vec![color(0.0, 0.0, 0.0); image_width]; image_height];
+
                     self.worker_tx
                         .send(WorkerMessage::Init {
-                            image_width: camera.image_width(),
-                            image_height: camera.image_height(),
+                            image_width,
+                            image_height,
                         })
                         .unwrap();
 
@@ -60,6 +65,7 @@ impl Worker {
                         camera,
                         scene,
                         iterations: 0,
+                        pixel_sums,
                     });
                 }
             }
@@ -85,19 +91,25 @@ pub struct Renderer {
     scene: Scene,
     iterations: usize,
     scanline: usize,
+    pixel_sums: Vec<Vec<Color>>,
 }
 
 impl Renderer {
     fn render_scanline(&mut self) -> Vec<Pixel> {
-        let pixels = (0..self.camera.image_width())
-            .into_par_iter()
-            .map(|i| {
+        let (pixels, pixel_sums) = self.pixel_sums[self.scanline]
+            .par_iter()
+            .enumerate()
+            .map(|(i, pixel_sum)| {
                 let j = self.scanline;
                 let n = self.iterations;
-                let rgb = self.camera.render_pixel(i, j, n, &self.scene.world);
-                Pixel { i, j, rgb }
+                let (rgb, pixel_sum) =
+                    self.camera
+                        .render_pixel(i, j, n, *pixel_sum, &self.scene.world);
+                (Pixel { i, j, rgb }, pixel_sum)
             })
-            .collect();
+            .unzip();
+
+        self.pixel_sums[self.scanline] = pixel_sums;
 
         self.scanline += 1;
         if self.scanline >= self.camera.image_height() {

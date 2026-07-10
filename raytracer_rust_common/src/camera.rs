@@ -73,7 +73,6 @@ pub struct Camera {
     render: CameraRenderOptions,
     scene: CameraSceneOptions,
     computed: CameraComputed,
-    pixel_color: Vec<Color>,
 }
 
 impl Camera {
@@ -116,17 +115,21 @@ impl Camera {
             defocus_disk_v,
         };
 
-        let pixel_color = vec![color(0.0, 0.0, 0.0); render.image_width * image_height];
-
         Camera {
             render,
             scene,
             computed,
-            pixel_color,
         }
     }
 
-    pub fn render_pixel(&mut self, i: usize, j: usize, n: usize, world: &impl Surface) -> [u8; 3] {
+    pub fn render_pixel(
+        &self,
+        i: usize,
+        j: usize,
+        n: usize,
+        pixel_sum: Color,
+        world: &impl Surface,
+    ) -> ([u8; 3], Color) {
         assert!(
             i < self.image_width(),
             "Pixel {} was outside width {}",
@@ -140,17 +143,11 @@ impl Camera {
             self.image_height()
         );
 
-        let index = j * self.render.image_width + i;
-
-        let pixel_color = self.pixel_color[index];
-
         let ray = self.get_ray(i as f64, j as f64);
         let color = self.get_color(ray, self.render.max_depth, world);
 
-        let pixel_color = pixel_color + color;
-        self.pixel_color[index] = pixel_color;
-
-        self.convert_color(pixel_color / n as f64)
+        let pixel_color = pixel_sum + color;
+        (self.convert_color(pixel_color / n as f64), pixel_color)
     }
 
     fn get_color(&self, ray: Ray, depth: usize, world: &impl Surface) -> Color {
