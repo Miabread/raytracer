@@ -4,7 +4,7 @@ use std::{
     ops::{Add, Div, Index, IndexMut, Mul, Neg, Sub},
 };
 
-use crate::util::interval::Interval;
+use crate::util::interval::{Interval, interval};
 
 pub fn vec3(x: f64, y: f64, z: f64) -> Vec3 {
     Vec3::new(x, y, z)
@@ -122,6 +122,23 @@ impl<T: Copy> Vec3<T> {
     }
     pub fn max<U: Copy>(self, rhs: Vec3<U>) -> Self {
         Self::new(self.0.max(rhs.0), self.1.max(rhs.1), self.2.max(rhs.2))
+    }
+}
+
+impl Color {
+    pub fn to_rgb(&self) -> [u8; 3] {
+        let intensity = interval(0.000, 0.999);
+        let color = self.map(|a| {
+            if a.is_nan() {
+                0.0
+            } else if a > 0.0 {
+                256.0 * intensity.clamp(a.sqrt())
+            } else {
+                0.0
+            }
+        });
+
+        [color.r() as _, color.g() as _, color.b() as _]
     }
 }
 

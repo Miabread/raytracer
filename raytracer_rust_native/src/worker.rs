@@ -100,11 +100,14 @@ impl Renderer {
             .par_iter()
             .enumerate()
             .map(|(i, pixel_sum)| {
+                let n = self.iterations as f64;
                 let j = self.scanline;
-                let n = self.iterations;
-                let (rgb, pixel_sum) =
-                    self.camera
-                        .render_pixel(i, j, n, *pixel_sum, &self.scene.world);
+
+                let pixel = self.camera.render_pixel(i, j, &self.scene.world);
+
+                let pixel_sum = *pixel_sum + pixel;
+                let rgb = (pixel_sum / n).to_rgb();
+
                 (Pixel { i, j, rgb }, pixel_sum)
             })
             .unzip();

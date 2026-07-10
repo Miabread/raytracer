@@ -122,14 +122,7 @@ impl Camera {
         }
     }
 
-    pub fn render_pixel(
-        &self,
-        i: usize,
-        j: usize,
-        n: usize,
-        pixel_sum: Color,
-        world: &impl Surface,
-    ) -> ([u8; 3], Color) {
+    pub fn render_pixel(&self, i: usize, j: usize, world: &impl Surface) -> Color {
         assert!(
             i < self.image_width(),
             "Pixel {} was outside width {}",
@@ -144,10 +137,7 @@ impl Camera {
         );
 
         let ray = self.get_ray(i as f64, j as f64);
-        let color = self.get_color(ray, self.render.max_depth, world);
-
-        let pixel_color = pixel_sum + color;
-        (self.convert_color(pixel_color / n as f64), pixel_color)
+        self.get_color(ray, self.render.max_depth, world)
     }
 
     fn get_color(&self, ray: Ray, depth: usize, world: &impl Surface) -> Color {
@@ -200,21 +190,6 @@ impl Camera {
         let time = Interval::UNIT.random_double();
 
         Ray::new(origin, direction, time)
-    }
-
-    fn convert_color(&self, color: Color) -> [u8; 3] {
-        let intensity = interval(0.000, 0.999);
-        let color = color.map(|a| {
-            if a.is_nan() {
-                0.0
-            } else if a > 0.0 {
-                256.0 * intensity.clamp(a.sqrt())
-            } else {
-                0.0
-            }
-        });
-
-        [color.r() as _, color.g() as _, color.b() as _]
     }
 
     pub fn image_width(&self) -> usize {
