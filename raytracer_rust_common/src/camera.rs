@@ -10,6 +10,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CameraRenderOptions {
     pub image_width: usize,
     pub aspect_ratio: f64,
@@ -57,6 +58,7 @@ impl Default for CameraSceneOptions {
     }
 }
 
+#[derive(Debug, Clone)]
 struct CameraComputed {
     image_height: usize,
     first_pixel_location: Point,
@@ -66,7 +68,7 @@ struct CameraComputed {
     defocus_disk_v: Arrow,
 }
 
-#[allow(dead_code)]
+#[derive(Debug, Clone)]
 pub struct Camera {
     render: CameraRenderOptions,
     scene: CameraSceneOptions,

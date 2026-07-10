@@ -3,7 +3,7 @@ use wasm_bindgen::prelude::*;
 
 use raytracer_rust_common::{
     camera::{Camera, CameraRenderOptions},
-    scene,
+    scene::BuiltinScene,
 };
 
 #[wasm_bindgen]
@@ -11,7 +11,7 @@ pub fn draw(aspect_ratio: f64) {
     console_error_panic_hook::set_once();
 
     // Scene
-    let scene = scene::cornell_smoke();
+    let scene = BuiltinScene::CornellSmoke.to_scene();
 
     let mut camera = Camera::new(
         CameraRenderOptions {
