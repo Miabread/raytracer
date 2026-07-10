@@ -5,5 +5,5 @@ self.onmessage = async (event) => {
 
     await init();
 
-    draw(event.data.aspectRatio);
+    draw(event.data.imageWidth, event.data.imageHeight);
 };

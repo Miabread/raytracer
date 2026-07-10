@@ -8,7 +8,7 @@ use raytracer_rust_common::{
 };
 
 #[wasm_bindgen]
-pub fn draw(aspect_ratio: f64) {
+pub fn draw(image_width: usize, image_height: usize) {
     console_error_panic_hook::set_once();
 
     // Scene
@@ -16,8 +16,8 @@ pub fn draw(aspect_ratio: f64) {
 
     let camera = Camera::new(
         CameraRenderOptions {
-            image_width: 600,
-            aspect_ratio,
+            image_width,
+            image_height,
             max_depth: 50,
         },
         scene.camera,
@@ -25,16 +25,15 @@ pub fn draw(aspect_ratio: f64) {
 
     // Render
     let samples_per_pixel = 200;
-    let mut pixel_sums =
-        vec![vec![color(0.0, 0.0, 0.0); camera.image_width()]; camera.image_height()];
+    let mut pixel_sums = vec![vec![color(0.0, 0.0, 0.0); image_width]; image_height];
 
-    let mut batch = Vec::with_capacity(camera.image_width());
+    let mut batch = Vec::with_capacity(image_width);
     let worker = worker_scope();
 
     // By protocol, first pixel sent determines canvas width and height, so we make sure to start the loop with it
     for n in 1..samples_per_pixel {
-        for j in (0..camera.image_height()).rev() {
-            for i in (0..camera.image_width()).rev() {
+        for j in (0..image_height).rev() {
+            for i in (0..image_width).rev() {
                 let pixel = camera.render_pixel(i, j, &scene.world);
 
                 pixel_sums[j][i] = pixel + pixel_sums[j][i];
@@ -45,7 +44,7 @@ pub fn draw(aspect_ratio: f64) {
             }
 
             // Surely there's a way to optimize this to avoid the copy?
-            let buffer = ArrayBuffer::new(4 * 3 * camera.image_width() as u32);
+            let buffer = ArrayBuffer::new(4 * 3 * image_width as u32);
             let view = Uint32Array::new(&buffer);
             view.copy_from(&batch);
 

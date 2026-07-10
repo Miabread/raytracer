@@ -13,7 +13,7 @@ use crate::{
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CameraRenderOptions {
     pub image_width: usize,
-    pub aspect_ratio: f64,
+    pub image_height: usize,
     pub max_depth: usize,
 }
 
@@ -21,7 +21,7 @@ impl Default for CameraRenderOptions {
     fn default() -> Self {
         Self {
             image_width: 400,
-            aspect_ratio: 16.0 / 9.0,
+            image_height: 225,
             max_depth: 10,
         }
     }
@@ -60,7 +60,6 @@ impl Default for CameraSceneOptions {
 
 #[derive(Debug, Clone)]
 struct CameraComputed {
-    image_height: usize,
     first_pixel_location: Point,
     pixel_delta_u: Arrow,
     pixel_delta_v: Arrow,
@@ -77,13 +76,12 @@ pub struct Camera {
 
 impl Camera {
     pub fn new(render: CameraRenderOptions, scene: CameraSceneOptions) -> Self {
-        let image_height = (render.image_width as f64 / render.aspect_ratio).max(1.0) as usize;
-
         // Viewport dimensions
         let theta = scene.vertical_fov.to_radians();
         let h = (theta / 2.0).tan();
         let viewport_height = 2.0 * h * scene.focus_distance;
-        let viewport_width = viewport_height * (render.image_width as f64 / image_height as f64);
+        let viewport_width =
+            viewport_height * (render.image_width as f64 / render.image_height as f64);
 
         // Camera basis vectors
         let w = (scene.look_from - scene.look_at).unit_vector().as_arrow();
@@ -95,7 +93,7 @@ impl Camera {
         let viewport_v = viewport_height * -v;
 
         let pixel_delta_u = viewport_u / render.image_width as f64;
-        let pixel_delta_v = viewport_v / image_height as f64;
+        let pixel_delta_v = viewport_v / render.image_height as f64;
 
         let viewport_upper_left =
             scene.look_from - (scene.focus_distance * w) - viewport_u / 2.0 - viewport_v / 2.0;
@@ -107,7 +105,6 @@ impl Camera {
         let defocus_disk_v = v * defocus_radius;
 
         let computed = CameraComputed {
-            image_height,
             first_pixel_location,
             pixel_delta_u,
             pixel_delta_v,
@@ -124,16 +121,16 @@ impl Camera {
 
     pub fn render_pixel(&self, i: usize, j: usize, world: &impl Surface) -> Color {
         assert!(
-            i < self.image_width(),
+            i < self.render.image_width,
             "Pixel {} was outside width {}",
             i,
-            self.image_width()
+            self.render.image_width
         );
         assert!(
-            j < self.image_height(),
+            j < self.render.image_height,
             "Pixel {} was outside height {}",
             j,
-            self.image_height()
+            self.render.image_height
         );
 
         let ray = self.get_ray(i as f64, j as f64);
@@ -190,13 +187,5 @@ impl Camera {
         let time = Interval::UNIT.random_double();
 
         Ray::new(origin, direction, time)
-    }
-
-    pub fn image_width(&self) -> usize {
-        self.render.image_width
-    }
-
-    pub fn image_height(&self) -> usize {
-        self.computed.image_height
     }
 }

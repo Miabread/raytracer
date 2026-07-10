@@ -4,19 +4,20 @@ const ctx = canvas.getContext('2d');
 
 const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
 
-worker.postMessage({ aspectRatio: window.innerWidth / window.innerHeight });
+const aspectRatio = window.innerWidth / window.innerHeight;
+const imageWidth = 400;
+const imageHeight = Math.floor(imageWidth / aspectRatio);
 
-console.log('worker posted');
+canvas.width = imageWidth;
+canvas.height = imageHeight;
 
-/** @type {ImageData} */
-let imageData = null;
-/** @type {Uint32Array} */
-let buffer = null;
+const imageData = ctx.createImageData(imageWidth, imageHeight);
+const buffer = new Uint32Array(imageData.data.buffer);
 
 let scanline = 0;
 let scanlineColor = 'blue';
 
-const handlePixelBatch = (/** @type {MessageEvent<ArrayBuffer>} */ e) => {
+worker.onmessage = (/** @type {MessageEvent<ArrayBuffer>} */ e) => {
     const array = new Uint32Array(e.data);
 
     for (let n = 0; n < array.length; n += 3) {
@@ -33,28 +34,16 @@ const handlePixelBatch = (/** @type {MessageEvent<ArrayBuffer>} */ e) => {
     e.data.transfer(0);
 };
 
-// By protocol, first pixel sent determines canvas width and height
-worker.onmessage = (/** @type {MessageEvent<ArrayBuffer>} */ e) => {
-    worker.onmessage = handlePixelBatch;
-
-    const [i, j] = new Uint32Array(e.data);
-    canvas.width = i;
-    canvas.height = j;
-    imageData = ctx.createImageData(i, j);
-    buffer = new Uint32Array(imageData.data.buffer);
-
-    handlePixelBatch(e);
-};
+worker.postMessage({ imageWidth, imageHeight });
 
 const render = () => {
-    if (imageData) {
-        ctx.putImageData(imageData, 0, 0);
+    ctx.putImageData(imageData, 0, 0);
 
-        if (scanlineColor) {
-            ctx.fillStyle = scanlineColor;
-            ctx.fillRect(0, scanline, canvas.width, canvas.height / 200);
-        }
+    if (scanlineColor) {
+        ctx.fillStyle = scanlineColor;
+        ctx.fillRect(0, scanline, canvas.width, canvas.height / 200);
     }
+
     requestAnimationFrame(render);
 };
 requestAnimationFrame(render);

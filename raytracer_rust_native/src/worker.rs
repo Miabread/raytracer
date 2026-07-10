@@ -49,8 +49,8 @@ impl Worker {
                     let scene = config.scene.to_scene();
                     let camera = Camera::new(config.render, scene.camera);
 
-                    let image_width = camera.image_width();
-                    let image_height = camera.image_height();
+                    let image_width = config.render.image_width;
+                    let image_height = config.render.image_height;
                     let pixel_sums = vec![vec![color(0.0, 0.0, 0.0); image_width]; image_height];
 
                     self.worker_tx
@@ -115,7 +115,7 @@ impl Renderer {
         self.pixel_sums[self.scanline] = pixel_sums;
 
         self.scanline += 1;
-        if self.scanline >= self.camera.image_height() {
+        if self.scanline >= self.pixel_sums.len() {
             self.scanline = 0;
             self.iterations += 1;
         }
