@@ -17,24 +17,27 @@ pub fn draw(aspect_ratio: f64) {
         CameraRenderOptions {
             image_width: 600,
             aspect_ratio,
-            samples_per_pixel: 200,
             max_depth: 50,
         },
         scene.camera,
     );
 
     // Render
-    let batch_amount = 100;
-    let mut batch = Vec::with_capacity(3 * batch_amount);
+    let samples_per_pixel = 200;
+    let mut batch = Vec::with_capacity(camera.image_width());
     let worker = worker_scope();
 
-    camera.render_scanline(&scene.world, &mut |[i, j], [r, g, b]| {
-        let color: u32 = (255 << 24) | ((b as u32) << 16) | ((g as u32) << 8) | r as u32;
-        batch.extend_from_slice(&[i as u32, j as u32, color]);
+    // By protocol, first pixel sent determines canvas width and height, so we make sure to start the loop with it
+    for n in 1..samples_per_pixel {
+        for j in (0..camera.image_height()).rev() {
+            for i in (0..camera.image_width()).rev() {
+                let [r, g, b] = camera.render_pixel(i, j, n, &scene.world);
+                let color: u32 = (255 << 24) | ((b as u32) << 16) | ((g as u32) << 8) | r as u32;
+                batch.extend_from_slice(&[i as u32, j as u32, color]);
+            }
 
-        if batch.len() >= 3 * batch_amount {
             // Surely there's a way to optimize this to avoid the copy?
-            let buffer = ArrayBuffer::new(4 * 3 * batch_amount as u32);
+            let buffer = ArrayBuffer::new(4 * 3 * camera.image_width() as u32);
             let view = Uint32Array::new(&buffer);
             view.copy_from(&batch);
 
@@ -44,7 +47,7 @@ pub fn draw(aspect_ratio: f64) {
 
             batch.clear();
         }
-    });
+    }
 }
 
 #[macro_export]
