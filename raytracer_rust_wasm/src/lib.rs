@@ -1,12 +1,10 @@
-pub mod camera;
-pub mod components;
-pub mod scene;
-pub mod util;
-
 use js_sys::{Array, ArrayBuffer, Uint32Array};
 use wasm_bindgen::prelude::*;
 
-use crate::camera::{Camera, CameraRenderOptions};
+use raytracer_rust_common::{
+    camera::{Camera, CameraRenderOptions},
+    scene,
+};
 
 #[wasm_bindgen]
 pub fn draw(aspect_ratio: f64) {
@@ -18,7 +16,7 @@ pub fn draw(aspect_ratio: f64) {
     let mut camera = Camera::new(
         CameraRenderOptions {
             image_width: 600,
-            aspect_ratio: 1.0,
+            aspect_ratio,
             samples_per_pixel: 200,
             max_depth: 50,
         },

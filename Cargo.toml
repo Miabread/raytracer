@@ -1,3 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["raytracer_rust_wasm"]
+members = ["raytracer_rust_common", "raytracer_rust_wasm"]
+
+[profile.release]
+lto = true
