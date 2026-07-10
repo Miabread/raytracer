@@ -4,7 +4,7 @@ pub mod worker;
 
 use std::sync::mpsc;
 
-use eframe::egui;
+use eframe::egui::{self, ColorImage};
 
 use crate::worker::{Pixel, Worker, WorkerConfig};
 
@@ -27,6 +27,8 @@ pub struct App {
     config: WorkerConfig,
     pixel_rx: mpsc::Receiver<Vec<Pixel>>,
     config_tx: mpsc::Sender<WorkerConfig>,
+    texture: Option<egui::TextureHandle>,
+    pixels: Vec<u8>,
 }
 
 impl App {
@@ -34,7 +36,7 @@ impl App {
         let config = if let Some(storage) = cc.storage {
             eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default()
         } else {
-            Default::default()
+            WorkerConfig::default()
         };
 
         let (pixel_tx, pixel_rx) = mpsc::channel();
@@ -45,6 +47,8 @@ impl App {
             config,
             pixel_rx,
             config_tx,
+            texture: None,
+            pixels: vec![],
         }
     }
 }
@@ -54,9 +58,54 @@ impl eframe::App for App {
         eframe::set_value(storage, eframe::APP_KEY, &self.config);
     }
 
+    fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let mut has_updated = false;
+
+        while let Ok(pixels) = self.pixel_rx.try_recv() {
+            has_updated = true;
+            let &Pixel { i, j, .. } = pixels.last().unwrap();
+
+            let [width, _] = self
+                .texture
+                .get_or_insert_with(|| {
+                    self.pixels = vec![0u8; (i + 1) * (j + 1) * 3];
+
+                    let data = egui::ColorImage::filled([i + 1, j + 1], egui::Color32::BLACK);
+                    ctx.load_texture("pixel_buffer", data.clone(), egui::TextureOptions::NEAREST)
+                })
+                .size();
+
+            for pixel in pixels {
+                let i = pixel.j * width * 3 + pixel.i * 3;
+                self.pixels[i] = pixel.rgb[0];
+                self.pixels[i + 1] = pixel.rgb[1];
+                self.pixels[i + 2] = pixel.rgb[2];
+            }
+        }
+
+        if let Some(texture) = &mut self.texture
+            && has_updated
+        {
+            let color_image =
+                ColorImage::from_rgb([texture.size()[0], texture.size()[1]], &self.pixels);
+
+            texture.set(color_image, egui::TextureOptions::NEAREST);
+        }
+    }
+
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         egui::Window::new("Controls").show(ui, |ui| {
+            if ui.button("Start").clicked() {
+                self.config_tx.send(self.config.clone()).unwrap();
+            }
+
             egui::warn_if_debug_build(ui);
+        });
+
+        egui::CentralPanel::default().show(ui, |ui| {
+            if let Some(texture) = &self.texture {
+                ui.image(texture);
+            }
         });
     }
 }

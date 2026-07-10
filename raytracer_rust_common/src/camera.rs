@@ -127,6 +127,19 @@ impl Camera {
     }
 
     pub fn render_pixel(&mut self, i: usize, j: usize, n: usize, world: &impl Surface) -> [u8; 3] {
+        assert!(
+            i < self.image_width(),
+            "Pixel {} was outside width {}",
+            i,
+            self.image_width()
+        );
+        assert!(
+            j < self.image_height(),
+            "Pixel {} was outside height {}",
+            j,
+            self.image_height()
+        );
+
         let index = j * self.render.image_width + i;
 
         let pixel_color = self.pixel_color[index];
