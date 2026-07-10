@@ -6,7 +6,7 @@ use std::sync::mpsc;
 
 use eframe::egui::{self, ColorImage};
 
-use crate::worker::{Update, Worker, WorkerConfig};
+use crate::worker::{MainMessage, Worker, WorkerConfig, WorkerMessage};
 
 fn main() -> eframe::Result {
     env_logger::init();
@@ -25,8 +25,8 @@ fn main() -> eframe::Result {
 
 pub struct App {
     config: WorkerConfig,
-    pixel_rx: mpsc::Receiver<Update>,
-    config_tx: mpsc::Sender<WorkerConfig>,
+    worker_rx: mpsc::Receiver<WorkerMessage>,
+    main_tx: mpsc::Sender<MainMessage>,
     texture: Option<egui::TextureHandle>,
     pixels: Vec<u8>,
 }
@@ -39,14 +39,14 @@ impl App {
             WorkerConfig::default()
         };
 
-        let (pixel_tx, pixel_rx) = mpsc::channel();
-        let (config_tx, config_rx) = mpsc::channel();
-        Worker::spawn_thread(pixel_tx, config_rx, cc.egui_ctx.clone());
+        let (worker_tx, worker_rx) = mpsc::channel();
+        let (main_tx, main_rx) = mpsc::channel();
+        Worker::spawn_thread(worker_tx, main_rx, cc.egui_ctx.clone());
 
         Self {
             config,
-            pixel_rx,
-            config_tx,
+            worker_rx,
+            main_tx,
             texture: None,
             pixels: vec![],
         }
@@ -58,14 +58,18 @@ impl eframe::App for App {
         eframe::set_value(storage, eframe::APP_KEY, &self.config);
     }
 
+    fn on_exit(&mut self) {
+        self.main_tx.send(MainMessage::Close).unwrap();
+    }
+
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let mut has_updated = false;
 
-        while let Ok(update) = self.pixel_rx.try_recv() {
+        while let Ok(update) = self.worker_rx.try_recv() {
             has_updated = true;
 
             match update {
-                Update::Init {
+                WorkerMessage::Init {
                     image_width,
                     image_height,
                 } => {
@@ -81,7 +85,7 @@ impl eframe::App for App {
                     ))
                 }
 
-                Update::Scanline { pixels } => {
+                WorkerMessage::Scanline { pixels } => {
                     let width = self
                         .texture
                         .as_ref()
@@ -114,7 +118,9 @@ impl eframe::App for App {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         egui::Window::new("Controls").show(ui, |ui| {
             if ui.button("Start").clicked() {
-                self.config_tx.send(self.config.clone()).unwrap();
+                self.main_tx
+                    .send(MainMessage::Config(self.config.clone()))
+                    .unwrap();
             }
 
             egui::warn_if_debug_build(ui);

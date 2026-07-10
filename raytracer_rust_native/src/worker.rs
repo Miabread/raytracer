@@ -1,4 +1,5 @@
 use std::{
+    ops::ControlFlow,
     sync::mpsc::{Receiver, Sender},
     thread,
 };
@@ -9,73 +10,118 @@ use raytracer_rust_common::{
     scene::{BuiltinScene, Scene},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Worker {
+    renderer: Option<Renderer>,
+    worker_tx: Sender<WorkerMessage>,
+    main_rx: Receiver<MainMessage>,
+    ctx: egui::Context,
+}
+
+impl Worker {
+    pub fn spawn_thread(
+        worker_tx: Sender<WorkerMessage>,
+        main_rx: Receiver<MainMessage>,
+        ctx: egui::Context,
+    ) {
+        thread::Builder::new()
+            .name("worker".to_owned())
+            .spawn(move || {
+                let mut worker = Worker {
+                    renderer: None,
+                    worker_tx,
+                    main_rx,
+                    ctx,
+                };
+
+                while worker.process().is_continue() {}
+            })
+            .unwrap();
+    }
+
+    fn process(&mut self) -> ControlFlow<()> {
+        for message in self.main_rx.try_iter() {
+            match message {
+                MainMessage::Close => return ControlFlow::Break(()),
+                MainMessage::Config(config) => {
+                    let scene = config.scene.to_scene();
+                    let camera = Camera::new(config.render, scene.camera);
+
+                    self.worker_tx
+                        .send(WorkerMessage::Init {
+                            image_width: camera.image_width(),
+                            image_height: camera.image_height(),
+                        })
+                        .unwrap();
+
+                    self.renderer = Some(Renderer {
+                        scanline: 0,
+                        camera,
+                        scene,
+                        iterations: 0,
+                    });
+                }
+            }
+        }
+
+        if let Some(renderer) = &mut self.renderer {
+            let pixels = renderer.render_scanline();
+
+            self.worker_tx
+                .send(WorkerMessage::Scanline { pixels })
+                .unwrap();
+
+            self.ctx.request_repaint();
+        }
+
+        ControlFlow::Continue(())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Renderer {
     camera: Camera,
     scene: Scene,
     iterations: usize,
     scanline: usize,
 }
 
-impl Worker {
-    pub fn spawn_thread(
-        pixel_tx: Sender<Update>,
-        config_rx: Receiver<WorkerConfig>,
-        ctx: egui::Context,
-    ) {
-        thread::Builder::new()
-            .name("worker".to_owned())
-            .spawn(move || {
-                let mut worker = None;
-                loop {
-                    for config in config_rx.try_iter() {
-                        let scene = config.scene.to_scene();
-                        let camera = Camera::new(config.render, scene.camera);
+impl Renderer {
+    fn render_scanline(&mut self) -> Vec<Pixel> {
+        let mut pixels = Vec::with_capacity(self.camera.image_width());
 
-                        pixel_tx
-                            .send(Update::Init {
-                                image_width: camera.image_width(),
-                                image_height: camera.image_height(),
-                            })
-                            .unwrap();
+        for i in 0..self.camera.image_width() {
+            let j = self.scanline;
+            let n = self.iterations;
+            let rgb = self.camera.render_pixel(i, j, n, &self.scene.world);
+            pixels.push(Pixel { i, j, rgb });
+        }
 
-                        worker = Some(Worker {
-                            scanline: 0,
-                            camera,
-                            scene,
-                            iterations: 0,
-                        });
-                    }
+        self.scanline += 1;
+        if self.scanline >= self.camera.image_height() {
+            self.scanline = 0;
+            self.iterations += 1;
+        }
 
-                    let Some(worker) = &mut worker else {
-                        continue;
-                    };
-
-                    let mut pixels = Vec::with_capacity(worker.camera.image_width());
-
-                    for i in 0..worker.camera.image_width() {
-                        let j = worker.scanline;
-                        let n = worker.iterations;
-                        let rgb = worker.camera.render_pixel(i, j, n, &worker.scene.world);
-                        pixels.push(Pixel { i, j, rgb });
-                    }
-
-                    worker.scanline += 1;
-                    if worker.scanline >= worker.camera.image_height() {
-                        worker.scanline = 0;
-                        worker.iterations += 1;
-                    }
-
-                    pixel_tx.send(Update::Scanline { pixels }).unwrap();
-                    ctx.request_repaint();
-                }
-            })
-            .unwrap();
+        pixels
     }
 }
 
+#[derive(Debug, Clone, Default, serde::Deserialize, serde::Serialize)]
+#[serde(default)]
+pub struct WorkerConfig {
+    pub render: CameraRenderOptions,
+    pub scene: BuiltinScene,
+}
+
 #[derive(Debug, Clone)]
-pub enum Update {
+pub enum MainMessage {
+    Config(WorkerConfig),
+    Close,
+}
+
+#[derive(Debug, Clone)]
+pub enum WorkerMessage {
     Init {
         image_width: usize,
         image_height: usize,
@@ -90,11 +136,4 @@ pub struct Pixel {
     pub i: usize,
     pub j: usize,
     pub rgb: [u8; 3],
-}
-
-#[derive(Debug, Clone, Default, serde::Deserialize, serde::Serialize)]
-#[serde(default)]
-pub struct WorkerConfig {
-    pub render: CameraRenderOptions,
-    pub scene: BuiltinScene,
 }
