@@ -4,6 +4,7 @@ use wasm_bindgen::prelude::*;
 use raytracer_rust_common::{
     camera::{Camera, CameraRenderOptions},
     scene::BuiltinScene,
+    util::vec3::color,
 };
 
 #[wasm_bindgen]
@@ -13,7 +14,7 @@ pub fn draw(aspect_ratio: f64) {
     // Scene
     let scene = BuiltinScene::CornellSmoke.to_scene();
 
-    let mut camera = Camera::new(
+    let camera = Camera::new(
         CameraRenderOptions {
             image_width: 600,
             aspect_ratio,
@@ -24,6 +25,9 @@ pub fn draw(aspect_ratio: f64) {
 
     // Render
     let samples_per_pixel = 200;
+    let mut pixel_sums =
+        vec![vec![color(0.0, 0.0, 0.0); camera.image_width()]; camera.image_height()];
+
     let mut batch = Vec::with_capacity(camera.image_width());
     let worker = worker_scope();
 
@@ -31,7 +35,11 @@ pub fn draw(aspect_ratio: f64) {
     for n in 1..samples_per_pixel {
         for j in (0..camera.image_height()).rev() {
             for i in (0..camera.image_width()).rev() {
-                let [r, g, b] = camera.render_pixel(i, j, n, &scene.world);
+                let pixel = camera.render_pixel(i, j, &scene.world);
+
+                pixel_sums[j][i] = pixel + pixel_sums[j][i];
+                let [r, g, b] = (pixel_sums[j][i] / n as f64).to_rgb();
+
                 let color: u32 = (255 << 24) | ((b as u32) << 16) | ((g as u32) << 8) | r as u32;
                 batch.extend_from_slice(&[i as u32, j as u32, color]);
             }
