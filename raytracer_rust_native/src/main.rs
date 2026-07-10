@@ -6,7 +6,7 @@ use std::sync::mpsc;
 
 use eframe::egui::{self, ColorImage};
 
-use crate::worker::{Pixel, Worker, WorkerConfig};
+use crate::worker::{Update, Worker, WorkerConfig};
 
 fn main() -> eframe::Result {
     env_logger::init();
@@ -25,7 +25,7 @@ fn main() -> eframe::Result {
 
 pub struct App {
     config: WorkerConfig,
-    pixel_rx: mpsc::Receiver<Vec<Pixel>>,
+    pixel_rx: mpsc::Receiver<Update>,
     config_tx: mpsc::Sender<WorkerConfig>,
     texture: Option<egui::TextureHandle>,
     pixels: Vec<u8>,
@@ -40,7 +40,7 @@ impl App {
         };
 
         let (pixel_tx, pixel_rx) = mpsc::channel();
-        let (config_tx, config_rx) = mpsc::channel::<WorkerConfig>();
+        let (config_tx, config_rx) = mpsc::channel();
         Worker::spawn_thread(pixel_tx, config_rx, cc.egui_ctx.clone());
 
         Self {
@@ -61,31 +61,49 @@ impl eframe::App for App {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let mut has_updated = false;
 
-        while let Ok(pixels) = self.pixel_rx.try_recv() {
+        while let Ok(update) = self.pixel_rx.try_recv() {
             has_updated = true;
-            let &Pixel { i, j, .. } = pixels.last().unwrap();
 
-            let [width, _] = self
-                .texture
-                .get_or_insert_with(|| {
-                    self.pixels = vec![0u8; (i + 1) * (j + 1) * 3];
+            match update {
+                Update::Init {
+                    image_width,
+                    image_height,
+                } => {
+                    self.pixels = vec![0u8; image_width * image_height * 3];
 
-                    let data = egui::ColorImage::filled([i + 1, j + 1], egui::Color32::BLACK);
-                    ctx.load_texture("pixel_buffer", data.clone(), egui::TextureOptions::NEAREST)
-                })
-                .size();
+                    let data =
+                        egui::ColorImage::filled([image_width, image_height], egui::Color32::BLACK);
 
-            for pixel in pixels {
-                let i = pixel.j * width * 3 + pixel.i * 3;
-                self.pixels[i] = pixel.rgb[0];
-                self.pixels[i + 1] = pixel.rgb[1];
-                self.pixels[i + 2] = pixel.rgb[2];
+                    self.texture = Some(ctx.load_texture(
+                        "pixel_buffer",
+                        data.clone(),
+                        egui::TextureOptions::NEAREST,
+                    ))
+                }
+
+                Update::Scanline { pixels } => {
+                    let width = self
+                        .texture
+                        .as_ref()
+                        .expect("scanline update before init update")
+                        .size()[0];
+
+                    for pixel in pixels {
+                        let i = pixel.j * width * 3 + pixel.i * 3;
+                        self.pixels[i] = pixel.rgb[0];
+                        self.pixels[i + 1] = pixel.rgb[1];
+                        self.pixels[i + 2] = pixel.rgb[2];
+                    }
+                }
             }
         }
 
-        if let Some(texture) = &mut self.texture
-            && has_updated
-        {
+        if has_updated {
+            let texture = self
+                .texture
+                .as_mut()
+                .expect("scanline update before init update");
+
             let color_image =
                 ColorImage::from_rgb([texture.size()[0], texture.size()[1]], &self.pixels);
 

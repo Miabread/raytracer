@@ -19,7 +19,7 @@ pub struct Worker {
 
 impl Worker {
     pub fn spawn_thread(
-        pixel_tx: Sender<Vec<Pixel>>,
+        pixel_tx: Sender<Update>,
         config_rx: Receiver<WorkerConfig>,
         ctx: egui::Context,
     ) {
@@ -31,8 +31,16 @@ impl Worker {
                     for config in config_rx.try_iter() {
                         let scene = config.scene.to_scene();
                         let camera = Camera::new(config.render, scene.camera);
+
+                        pixel_tx
+                            .send(Update::Init {
+                                image_width: camera.image_width(),
+                                image_height: camera.image_height(),
+                            })
+                            .unwrap();
+
                         worker = Some(Worker {
-                            scanline: camera.image_height() - 1,
+                            scanline: 0,
                             camera,
                             scene,
                             iterations: 0,
@@ -52,19 +60,29 @@ impl Worker {
                         pixels.push(Pixel { i, j, rgb });
                     }
 
-                    if worker.scanline == 0 {
-                        worker.scanline = worker.camera.image_height() - 1;
+                    worker.scanline += 1;
+                    if worker.scanline >= worker.camera.image_height() {
+                        worker.scanline = 0;
                         worker.iterations += 1;
-                    } else {
-                        worker.scanline -= 1;
                     }
 
-                    pixel_tx.send(pixels).unwrap();
+                    pixel_tx.send(Update::Scanline { pixels }).unwrap();
                     ctx.request_repaint();
                 }
             })
             .unwrap();
     }
+}
+
+#[derive(Debug, Clone)]
+pub enum Update {
+    Init {
+        image_width: usize,
+        image_height: usize,
+    },
+    Scanline {
+        pixels: Vec<Pixel>,
+    },
 }
 
 #[derive(Debug, Clone, Copy)]
