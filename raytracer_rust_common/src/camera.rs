@@ -205,7 +205,9 @@ impl Camera {
     fn convert_color(&self, color: Color) -> [u8; 3] {
         let intensity = interval(0.000, 0.999);
         let color = color.map(|a| {
-            if a > 0.0 {
+            if a.is_nan() {
+                0.0
+            } else if a > 0.0 {
                 256.0 * intensity.clamp(a.sqrt())
             } else {
                 0.0
