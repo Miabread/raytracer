@@ -5,6 +5,7 @@ use std::{
 };
 
 use eframe::egui;
+use rayon::prelude::*;
 use raytracer_rust_common::{
     camera::{Camera, CameraRenderOptions},
     scene::{BuiltinScene, Scene},
@@ -88,14 +89,15 @@ pub struct Renderer {
 
 impl Renderer {
     fn render_scanline(&mut self) -> Vec<Pixel> {
-        let mut pixels = Vec::with_capacity(self.camera.image_width());
-
-        for i in 0..self.camera.image_width() {
-            let j = self.scanline;
-            let n = self.iterations;
-            let rgb = self.camera.render_pixel(i, j, n, &self.scene.world);
-            pixels.push(Pixel { i, j, rgb });
-        }
+        let pixels = (0..self.camera.image_width())
+            .into_par_iter()
+            .map(|i| {
+                let j = self.scanline;
+                let n = self.iterations;
+                let rgb = self.camera.render_pixel(i, j, n, &self.scene.world);
+                Pixel { i, j, rgb }
+            })
+            .collect();
 
         self.scanline += 1;
         if self.scanline >= self.camera.image_height() {

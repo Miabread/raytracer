@@ -3,7 +3,7 @@ pub mod primitive;
 pub mod structure;
 pub mod volume;
 
-use std::rc::Rc;
+use std::sync::Arc;
 
 use enum_dispatch::enum_dispatch;
 
@@ -48,7 +48,7 @@ pub trait Surface: Into<SurfaceEnum> {
         Self: std::marker::Sized,
     {
         Shared {
-            inner: Rc::new(self.into()),
+            inner: Arc::new(self.into()),
         }
     }
 
@@ -63,7 +63,7 @@ pub trait Surface: Into<SurfaceEnum> {
 
 #[derive(Debug, Clone)]
 pub struct Shared {
-    inner: Rc<SurfaceEnum>,
+    inner: Arc<SurfaceEnum>,
 }
 
 impl Surface for Shared {

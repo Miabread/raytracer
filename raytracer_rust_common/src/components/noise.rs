@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use enum_dispatch::enum_dispatch;
 
@@ -37,14 +37,14 @@ pub trait Noise: Into<NoiseEnum> {
         Self: std::marker::Sized,
     {
         Shared {
-            inner: Rc::new(self.into()),
+            inner: Arc::new(self.into()),
         }
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct Shared {
-    inner: Rc<NoiseEnum>,
+    inner: Arc<NoiseEnum>,
 }
 
 impl Noise for Shared {
