@@ -3,5 +3,5 @@ resolver = "2"
 members = [
     "raytracer_rust_common",
     "raytracer_rust_native",
-    "raytracer_rust_wasm",
+    "raytracer_rust_wasm", "raytracer_wgpu",
 ]
