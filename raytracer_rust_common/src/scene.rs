@@ -39,6 +39,7 @@ pub enum BuiltinScene {
     SimpleLight,
     CornellBox,
     CornellSmoke,
+    AllMetalSpheres,
 }
 
 impl BuiltinScene {
@@ -431,6 +432,54 @@ impl BuiltinScene {
                     look_from: point(278.0, 278.0, -800.0),
                     look_at: point(278.0, 278.0, 0.0),
                     background: Background::Solid(color(0.0, 0.0, 0.0)),
+                    ..Default::default()
+                }
+            }
+            BuiltinScene::AllMetalSpheres => {
+                let material_ground = Lambert::new(Checker::new(
+                    0.32,
+                    color(0.2, 0.3, 0.1),
+                    color(0.9, 0.9, 0.9),
+                ));
+                world.add(Sphere::stationary(
+                    point(0.0, -1000.0, 0.0),
+                    1000.0,
+                    material_ground,
+                ));
+
+                for a in -11..11 {
+                    for b in -11..11 {
+                        let center_start = point(
+                            a as f64 + 0.9 * Interval::UNIT.random_double(),
+                            0.2,
+                            b as f64 + 0.9 * Interval::UNIT.random_double(),
+                        );
+                        if (center_start - point(4.0, 0.2, 0.0)).length() <= 0.9 {
+                            continue;
+                        }
+
+                        let albedo = Color::random(Interval::UNIT) * Color::random(Interval::UNIT);
+                        let material = Metal::new(albedo, 0.0);
+
+                        world.add(Sphere::stationary(center_start, 0.2, material));
+                    }
+                }
+
+                let material1 = Metal::new(color(0.65, 0.05, 0.05), 0.0);
+                world.add(Sphere::stationary(point(0.0, 1.0, 0.0), 1.0, material1));
+
+                let material2 = Metal::new(color(0.4, 0.2, 0.1), 0.0);
+                world.add(Sphere::stationary(point(-4.0, 1.0, 0.0), 1.0, material2));
+
+                let material3 = Metal::new(color(0.7, 0.6, 0.5), 0.0);
+                world.add(Sphere::stationary(point(4.0, 1.0, 0.0), 1.0, material3));
+
+                CameraSceneOptions {
+                    vertical_fov: 20.0,
+                    look_from: point(13.0, 2.0, 3.0),
+                    look_at: point(0.0, 0.0, 0.0),
+                    defocus_angle: 0.6,
+                    focus_distance: 10.0,
                     ..Default::default()
                 }
             }
